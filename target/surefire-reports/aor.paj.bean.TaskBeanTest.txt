@@ -1,0 +1,8 @@
+-------------------------------------------------------------------------------
+Test set: aor.paj.bean.TaskBeanTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.073 s <<< FAILURE! - in aor.paj.bean.TaskBeanTest
+testAddTask_Success  Time elapsed: 0.007 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "aor.paj.dto.TaskDto.getStatus()" is null
+	at aor.paj.bean.TaskBeanTest.testAddTask_Success(TaskBeanTest.java:86)
+
