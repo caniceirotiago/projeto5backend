@@ -9,6 +9,8 @@ import java.util.Set;
 @Table(name="user")
 @NamedQuery(name = "User.checkIfEmailExists", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.email = :email")
 @NamedQuery(name = "User.checkIfUsernameExists", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.username = :username")
+@NamedQuery(name = "User.findByResetPasswordToken", query = "SELECT u FROM UserEntity u WHERE u.resetPasswordToken = :resetPasswordToken")
+@NamedQuery(name = "User.findUserByConfirmationToken", query = "SELECT u FROM UserEntity u WHERE u.confirmationToken = :confirmationToken")
 @NamedQuery(name = "User.findUserByUsername", query = "SELECT u FROM UserEntity u " +
         "WHERE u.username = :username")
 @NamedQuery(name = "User.findUserByEmail", query = "SELECT u FROM UserEntity u " +
@@ -50,13 +52,22 @@ public class UserEntity implements Serializable {
     private boolean deleted;
     @Column(name="last_activity_timestamp", nullable=true, updatable = true)
     private Instant lastActivityTimestamp;
+    @Column(name = "is_confirmed")
+    private boolean isConfirmed = false;
+    @Column(name = "confirmation_token")
+    private String confirmationToken;
+    @Column(name="reset_password_token")
+    private String resetPasswordToken;
+    @Column(name="reset_password_token_expiry")
+    private Instant resetPasswordTokenExpiry;
     @OneToMany(mappedBy = "user")
     private Set<TaskEntity> tasks;
     @OneToMany(mappedBy = "author")
     private Set<CategoryEntity>  categories;
     public UserEntity() {}
     public UserEntity(String username, String password, String email, String firstName, String lastName,
-                      String phoneNumber, String photoURL, String token, String role, boolean deleted) {
+                      String phoneNumber, String photoURL, String token, String role, boolean deleted
+            , boolean isConfirmed, String confirmationToken) {
         this.username = username;
         this.password = password;
         this.email = email;
@@ -67,7 +78,41 @@ public class UserEntity implements Serializable {
         this.token = token;
         this.role = role;
         this.deleted = deleted;
+        this.isConfirmed = isConfirmed;
+        this.confirmationToken = confirmationToken;
     }
+    public String getResetPasswordToken() {
+        return resetPasswordToken;
+    }
+
+    public void setResetPasswordToken(String resetPasswordToken) {
+        this.resetPasswordToken = resetPasswordToken;
+    }
+
+    public Instant getResetPasswordTokenExpiry() {
+        return resetPasswordTokenExpiry;
+    }
+
+    public void setResetPasswordTokenExpiry(Instant resetPasswordTokenExpiry) {
+        this.resetPasswordTokenExpiry = resetPasswordTokenExpiry;
+    }
+
+    public boolean isConfirmed() {
+        return isConfirmed;
+    }
+
+    public String getConfirmationToken() {
+        return confirmationToken;
+    }
+
+    public void setConfirmed(boolean confirmed) {
+        isConfirmed = confirmed;
+    }
+
+    public void setConfirmationToken(String confirmationToken) {
+        this.confirmationToken = confirmationToken;
+    }
+
     public String getRole() {
         return role;
     }

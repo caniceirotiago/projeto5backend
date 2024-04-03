@@ -36,6 +36,25 @@ public class UserDao extends AbstractDao<UserEntity> {
 			return null;
 		}
 	}
+	public UserEntity findUserByConfirmationToken(String token) {
+		try {
+			Query query = entityManager.createNamedQuery("User.findUserByConfirmationToken", UserEntity.class);
+			query.setParameter("confirmationToken", token);
+			return (UserEntity) query.getSingleResult();
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+	public UserEntity findUserByResetPasswordToken(String resetPasswordToken) {
+		try {
+			return entityManager.createNamedQuery("User.findByResetPasswordToken", UserEntity.class)
+					.setParameter("resetPasswordToken", resetPasswordToken)
+					.getSingleResult();
+		} catch (NoResultException e) {
+			return null; // Token inválido ou expirado
+		}
+	}
+
 	public boolean updateUser(UserEntity user) {
 		try {
 			System.out.println("logout" + user);

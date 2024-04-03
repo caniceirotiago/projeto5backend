@@ -13,6 +13,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.net.URI;
 import java.util.List;
 
 
@@ -46,6 +47,53 @@ public class UserService {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"User registration failed\"}").build();
         }
     }
+
+    @Path("/confirm")
+    @POST
+    public Response confirmRegistration(@QueryParam("token") String token) {
+        System.out.println(token);
+        if (token == null || token.trim().isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Confirmation token invalid or not existent.").build();
+        }
+        if (userBean.confirmUser(token)) {
+
+            return Response.ok("{\"message\":\"Account confirmed.\"}")
+                    .build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).entity("Confirmation token invalid.").build();
+        }
+    }
+    @POST
+    @Path("/request-password-reset")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response requestPasswordReset(ResetPasswordRequestDTO requestPasswordResetDto) {
+        try {
+            boolean requestResult = userBean.requestPasswordReset(requestPasswordResetDto.getEmail());
+            if (requestResult) {
+                return Response.ok().entity("{\"message\":\"Instruções de redefinição de senha enviadas para o seu email.\"}").build();
+            } else {
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Falha ao solicitar redefinição de senha.\"}").build();
+            }
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"message\":\"Erro interno do servidor.\"}").build();
+        }
+    }
+    @POST
+    @Path("/reset-password")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response resetPassword(ResetPasswordDTO resetPasswordDto) {
+        try {
+            boolean resetResult = userBean.resetPassword(resetPasswordDto.getToken(), resetPasswordDto.getNewPassword());
+            if (resetResult) {
+                return Response.ok().entity("{\"message\":\"Senha redefinida com sucesso.\"}").build();
+            } else {
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Falha na redefinição de senha. Token inválido ou expirado.\"}").build();
+            }
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"message\":\"Erro interno do servidor.\"}").build();
+        }
+    }
+
 
 
     /**

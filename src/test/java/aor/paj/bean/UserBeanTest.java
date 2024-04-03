@@ -39,7 +39,7 @@ class UserBeanTest {
 
         testUser = new UserEntity("testUser", "securePassword123", "testUser@example.com",
                 "Test", "User", "123-456-7890", "https://example.com/photo.jpg",
-                "uniqueToken123456", "USER", false);
+                "uniqueToken123456", "USER", false, true, "test");
 
         when (userDao.updateUser(any(UserEntity.class))).thenReturn(true);
         when (userDao.deleteUser(anyString())).thenReturn(true);

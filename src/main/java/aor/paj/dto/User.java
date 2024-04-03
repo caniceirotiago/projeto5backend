@@ -36,6 +36,8 @@ public class User {
     private String photoURL;
     @NotBlank
     private String role;
+    private String confirmationToken;
+    private boolean isConfirmed;
 
     private boolean deleted;
 
@@ -57,6 +59,23 @@ public class User {
     }
 
     // getters e setters como xmlElement
+
+
+    public String getConfirmationToken() {
+        return confirmationToken;
+    }
+
+    public boolean isConfirmed() {
+        return isConfirmed;
+    }
+
+    public void setConfirmationToken(String confirmationToken) {
+        this.confirmationToken = confirmationToken;
+    }
+
+    public void setConfirmed(boolean confirmed) {
+        isConfirmed = confirmed;
+    }
 
     @XmlElement
     public String getRole() {
@@ -135,6 +154,9 @@ public class User {
                 ", lastName='" + lastName + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +
                 ", photoURL='" + photoURL + '\'' +
+                ", role='" + role + '\'' +
+                ", confirmationToken='" + confirmationToken + '\'' +
+                ", isConfirmed=" + isConfirmed +
                 '}';
     }
 }

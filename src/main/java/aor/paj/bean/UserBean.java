@@ -11,6 +11,7 @@ import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.exception.DuplicateUserException;
+import aor.paj.service.EmailService;
 import aor.paj.service.status.userRoleManager;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
@@ -23,9 +24,11 @@ import util.HashUtil;
 import java.io.*;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * UserBean is a managed bean responsible for managing user data within the application. It provides functionality
@@ -46,6 +49,8 @@ public class UserBean implements Serializable {
     CategoryDao categoryDao;
     @EJB
     ConfigurationBean configBean;
+    @EJB
+    EmailService emailService;
 
     private UserEntity convertUserDtotoUserEntity(User user){
         UserEntity userEntity = new UserEntity();
@@ -59,6 +64,9 @@ public class UserBean implements Serializable {
             userEntity.setToken(null);
             userEntity.setPhotoURL(user.getPhotoURL());
             userEntity.setRole(user.getRole());
+            userEntity.setDeleted(false);
+            userEntity.setConfirmed(false);
+            userEntity.setConfirmationToken(user.getConfirmationToken());
             System.out.println(userEntity);
             System.out.println(user);
             return userEntity;
@@ -79,12 +87,31 @@ public class UserBean implements Serializable {
         String hashedPassword = HashUtil.toSHA256(user.getPassword());
         user.setPassword(hashedPassword);
         try {
+
+            String confirmationToken = UUID.randomUUID().toString();
+            user.setConfirmationToken(confirmationToken);
+            user.setConfirmed(false);
+            emailService.sendConfirmationEmail(user.getEmail(), confirmationToken);
+            System.out.println(user);
             userDao.persist(convertUserDtotoUserEntity(user));
             return true;
         } catch (NoResultException e ) {
             return false;
         }
     }
+
+    public boolean confirmUser(String token) {
+        UserEntity user = userDao.findUserByConfirmationToken(token);
+        System.out.println(user);
+        if (user != null) {
+            user.setConfirmationToken(null);
+            user.setConfirmed(true);
+            userDao.updateUser(user);
+            return true;
+        }
+        return false;
+    }
+
     public boolean checkIfUsernameExists(String username){
         if(username !=null){
             return userDao.checkIfUsernameExists(username);
@@ -175,25 +202,25 @@ public class UserBean implements Serializable {
             userDao.persist(new UserEntity("admin", hashedAdminPassword,"admin@admin.com",
                     "admin", "admin", "admin",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "admin", userRoleManager.PRODUCT_OWNER,false));
+                    "admin", userRoleManager.PRODUCT_OWNER,false, true, "admin"));
         }
         if(scrumMaster == null){
             userDao.persist(new UserEntity("scrumMasterTest", hashedAdminPassword,"srummaster@admin.com",
                     "scrumMasterTest", "test", "123123123",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "scrum", userRoleManager.SCRUM_MASTER,false));
+                    "scrum", userRoleManager.SCRUM_MASTER,false, true, "scrumMasterTest"));
         }
         if(developer == null){
             userDao.persist(new UserEntity("developerTest", hashedAdminPassword,"developer@admin.com",
                     "DeveloperTest", "test", "123123123",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "devel", userRoleManager.DEVELOPER,false));
+                    "devel", userRoleManager.DEVELOPER,false, true, "developerTest"));
         }
         if(deletedTasks == null){
             userDao.persist(new UserEntity("deletedUserTasks", hashedAdminPassword,"deleted@admin.com",
                     "deleted", "tasks", "deleted",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "deleted", userRoleManager.PRODUCT_OWNER,false));
+                    "deleted", userRoleManager.PRODUCT_OWNER,false, true, "deletedUserTasks"));
         }
     }
 
@@ -305,6 +332,37 @@ public class UserBean implements Serializable {
         }
         return users;
     }
+    public boolean requestPasswordReset(String email) {
+        UserEntity user = userDao.findUserByEmail(email);
+        if (user == null) {
+            return false; // Usuário não encontrado
+        }
+        String resetToken = UUID.randomUUID().toString();
+        user.setResetPasswordToken(resetToken);
+        // Define um tempo de expiração para o token, por exemplo, 30 minutos a partir de agora
+        user.setResetPasswordTokenExpiry(Instant.now().plus(30, ChronoUnit.MINUTES));
+        userDao.updateUser(user);
+
+        // Enviar e-mail com o token de redefinição (implemente esta parte de acordo com seu serviço de e-mail)
+        emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
+
+        return true;
+    }
+    public boolean resetPassword(String token, String newPassword) {
+        UserEntity user = userDao.findUserByResetPasswordToken(token);
+        if (user == null || user.getResetPasswordTokenExpiry().isBefore(Instant.now())) {
+            // Token não encontrado ou expirado
+            return false;
+        }
+        user.setPassword(HashUtil.toSHA256(newPassword));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiry(null);
+        userDao.updateUser(user);
+
+        return true;
+    }
+
+
     public boolean deleteUserPermanently(String username){
         return userDao.deleteUser(username);
     }

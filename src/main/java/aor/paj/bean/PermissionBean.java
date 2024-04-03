@@ -53,10 +53,12 @@ public class PermissionBean {
         scrumMasterPermissions.add(Function.GET_ALL_TASKS_BY_CATEGORY_AND_USER);
         scrumMasterPermissions.add(Function.RECYCLY_TASK_BY_ID);
         scrumMasterPermissions.add(Function.GET_ALL_TASKS_DELETED);
+        scrumMasterPermissions.add(Function.GET_ALL_CATEGORIES);
 
         //Developer
         HashSet<Function> developerPermissions = new HashSet<>();
         developerPermissions.add(Function.EDIT_OWN_USER_INFO);
+        developerPermissions.add(Function.GET_ALL_CATEGORIES);
 
         rolePermissions.put(userRoleManager.PRODUCT_OWNER, productOwnerPermissions);
         rolePermissions.put(userRoleManager.SCRUM_MASTER, scrumMasterPermissions);

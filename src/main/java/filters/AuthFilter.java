@@ -30,7 +30,11 @@ public class AuthFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext requestContext) {
         String path = requestContext.getUriInfo().getPath();
-        if (path.endsWith("/login") || path.endsWith("/register")) {
+        if (path.endsWith("/login")
+                || path.endsWith("/register")
+                || path.contains("/confirm")
+                || path.contains("/request-password-reset")
+                || path.contains("/reset-password")) {
             return;
         }
         String authHeader = requestContext.getHeaderString("Authorization");
