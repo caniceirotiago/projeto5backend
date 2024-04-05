@@ -128,7 +128,7 @@ public class UserBean implements Serializable {
     public String login(LoginDto user){
         UserEntity userEntity = userDao.findUserByUsername(user.getUsername());
         if(userEntity !=null){
-            if(!userEntity.getDeleted()){
+            if(!userEntity.getDeleted() && userEntity.isConfirmed()){
                 String hashedPassword = HashUtil.toSHA256(user.getPassword());
                 if (userEntity != null){
                     if (userEntity.getPassword().equals(hashedPassword)){

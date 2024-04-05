@@ -20,7 +20,7 @@ import java.lang.reflect.Method;
 @Priority(Priorities.AUTHORIZATION)
 public class AuthFilter implements ContainerRequestFilter {
     @Inject
-    private UserBean userBean; // Seu bean que gerencia os usuários
+    private UserBean userBean;
 
     @Context
     private ResourceInfo resourceInfo;

@@ -146,11 +146,10 @@ public class UserService {
      * (without the password) in JSON format.
      */
     @GET
-    @Path("info")
+    @Path("info/{usernameProfile}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response userInfo(@HeaderParam("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        UserEntity userEntity = userBean.getUserByToken(token);
+    public Response userInfo(@PathParam("usernameProfile") String usernameProfile) {
+        UserEntity userEntity = userBean.getUserByUsername(usernameProfile);
         UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
         return Response.status(200).entity(userWithoutPassword).build();
     }
