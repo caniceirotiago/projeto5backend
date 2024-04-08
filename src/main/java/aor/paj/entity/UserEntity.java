@@ -9,8 +9,13 @@ import java.util.Set;
 @Table(name="user")
 @NamedQuery(name = "User.checkIfEmailExists", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.email = :email")
 @NamedQuery(name = "User.checkIfUsernameExists", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.username = :username")
+@NamedQuery(name = "User.getNumberOfConfirmedUsersByMonth", query = "SELECT COALESCE(EXTRACT(YEAR FROM u.confirmationTimestamp), 0) AS yearAlias, COALESCE(EXTRACT(MONTH FROM u.confirmationTimestamp), 0) AS monthAlias, COUNT(u) FROM UserEntity u WHERE u.isConfirmed = true AND u.confirmationTimestamp IS NOT NULL GROUP BY yearAlias, monthAlias ORDER BY yearAlias, monthAlias")
+
 @NamedQuery(name = "User.findByResetPasswordToken", query = "SELECT u FROM UserEntity u WHERE u.resetPasswordToken = :resetPasswordToken")
 @NamedQuery(name = "User.findUserByConfirmationToken", query = "SELECT u FROM UserEntity u WHERE u.confirmationToken = :confirmationToken")
+@NamedQuery(name = "User.getConfirmedUsers", query = "SELECT u FROM UserEntity u WHERE u.isConfirmed = true")
+@NamedQuery(name = "User.getUnconfirmedUsers", query = "SELECT u FROM UserEntity u WHERE u.isConfirmed = false")
+@NamedQuery(name = "User.getAverageTasksPerUser", query = "SELECT AVG(size(u.tasks)) FROM UserEntity u")
 @NamedQuery(name = "User.findUserByUsername", query = "SELECT u FROM UserEntity u " +
         "WHERE u.username = :username")
 @NamedQuery(name = "User.findUserByEmail", query = "SELECT u FROM UserEntity u " +
@@ -56,6 +61,8 @@ public class UserEntity implements Serializable {
     private boolean isConfirmed = false;
     @Column(name = "confirmation_token")
     private String confirmationToken;
+    @Column(name="confirmation_timestamp", nullable=true, updatable = true)
+    private Instant confirmationTimestamp;
     @Column(name="reset_password_token")
     private String resetPasswordToken;
     @Column(name="reset_password_token_expiry")
@@ -81,6 +88,15 @@ public class UserEntity implements Serializable {
         this.isConfirmed = isConfirmed;
         this.confirmationToken = confirmationToken;
     }
+
+    public Instant getConfirmationTimestamp() {
+        return confirmationTimestamp;
+    }
+
+    public void setConfirmationTimestamp(Instant confirmationTimestamp) {
+        this.confirmationTimestamp = confirmationTimestamp;
+    }
+
     public String getResetPasswordToken() {
         return resetPasswordToken;
     }

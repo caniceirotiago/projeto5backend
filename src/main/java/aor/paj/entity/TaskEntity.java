@@ -3,9 +3,20 @@ import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table (name="task")
+@NamedQuery(name="Task.findTasksByStatus", query="SELECT t FROM TaskEntity t " +
+        "WHERE t.status=:status")
+@NamedQuery(name="Task.findCategoriesByNumberOfTasks", query="SELECT t.category FROM TaskEntity t " +
+        "GROUP BY t.category " +
+        "ORDER BY COUNT(t.category) DESC")
+@NamedQuery(name="Task.findAllCompletedTasksWithTimestamps", query="SELECT t FROM TaskEntity t " +
+        "WHERE t.status = :doneStatus AND t.doingTimestamp IS NOT NULL AND t.doneTimestamp IS NOT NULL")
+@NamedQuery(name = "Task.findAllDoneTimestamps",
+        query = "SELECT t.doneTimestamp FROM TaskEntity t WHERE t.doneTimestamp IS NOT NULL")
+
 @NamedQuery(name="Task.findTaskById", query="SELECT t FROM TaskEntity t " +
         "WHERE t.id=:id")
 @NamedQuery(name="Task.findTasksByUser", query="SELECT t FROM TaskEntity t " +
@@ -54,8 +65,30 @@ public class TaskEntity implements Serializable {
     private CategoryEntity category;
     @Column(name="deleted", nullable = false,unique = false,updatable = true)
     private boolean deleted;
+    @Column(name = "doing_timestamp", nullable = true)
+    private LocalDateTime doingTimestamp;
+
+    @Column(name = "done_timestamp", nullable = true)
+    private LocalDateTime doneTimestamp;
+
 
     public TaskEntity() {}
+
+    public void setDoingTimestamp(LocalDateTime doingTimestamp) {
+        this.doingTimestamp = doingTimestamp;
+    }
+
+    public void setDoneTimestamp(LocalDateTime doneTimestamp) {
+        this.doneTimestamp = doneTimestamp;
+    }
+
+    public LocalDateTime getDoingTimestamp() {
+        return doingTimestamp;
+    }
+
+    public LocalDateTime getDoneTimestamp() {
+        return doneTimestamp;
+    }
 
     public boolean isDeleted() {
         return deleted;

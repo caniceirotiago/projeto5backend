@@ -24,6 +24,8 @@ public class CategoryBean implements Serializable {
     UserBean userBean;
     @Inject
     TaskBean taskBean;
+    @EJB
+    StatisticsBean statisticsBean;
 
     public CategoryDto convertCategoryEntitytoCategoryDto(CategoryEntity categoryEntity){
         CategoryDto categoryDto=new CategoryDto();
@@ -47,6 +49,7 @@ public class CategoryBean implements Serializable {
             categoryEntity.setType(type);
             categoryEntity.setAuthor(user);
             categoryDao.persist(categoryEntity);
+            statisticsBean.broadcastCategoryStatisticsUpdate();
             CategoryDto categoryDto=convertCategoryEntitytoCategoryDto(categoryEntity);
             return categoryDto;
         }
@@ -62,8 +65,8 @@ public class CategoryBean implements Serializable {
         if(categoryDao.findCategoryByType(newType)==null) {
             CategoryEntity categoryEntity = categoryDao.findCategoryByType(oldType);
             categoryEntity.setType(newType);
-
             categoryDao.merge(categoryEntity);
+            statisticsBean.broadcastCategoryStatisticsUpdate();
             return true;
         }
         return false;
@@ -72,7 +75,7 @@ public class CategoryBean implements Serializable {
     public boolean deleteCategory(String category_type){
         if(categoryDao.findCategoryByType(category_type)!=null){
             categoryDao.deleteCategory(category_type);
-
+            statisticsBean.broadcastCategoryStatisticsUpdate();
             return true;
         } else return false;
     }
@@ -97,5 +100,12 @@ public class CategoryBean implements Serializable {
             categoriesWithTasks.add(convertCategoryEntitytoCategoryDto(category));
         }
         return categoriesWithTasks;
+    }
+    public List<CategoryDto> convertCategoryEntitiesToCategoryDtos(List<CategoryEntity> categories){
+        List<CategoryDto> categoryDtos = new ArrayList<>();
+        for(CategoryEntity category: categories){
+            categoryDtos.add(convertCategoryEntitytoCategoryDto(category));
+        }
+        return categoryDtos;
     }
 }

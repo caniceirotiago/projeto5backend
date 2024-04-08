@@ -7,6 +7,8 @@ import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 
+import java.time.Month;
+import java.util.HashMap;
 import java.util.List;
 
 @Stateless
@@ -106,4 +108,38 @@ public class UserDao extends AbstractDao<UserEntity> {
 			return null;
 		}
 	}
+	public List<UserEntity> getConfirmedUsers() {
+		try {
+			return (List<UserEntity>) em.createNamedQuery("User.getConfirmedUsers").getResultList();
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+	public List<UserEntity> getUnconfirmedUsers() {
+		try {
+			return (List<UserEntity>) em.createNamedQuery("User.getUnconfirmedUsers").getResultList();
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+	public double getAverageTasksPerUser() {
+		try {
+			return (double) em.createNamedQuery("User.getAverageTasksPerUser").getSingleResult();
+		} catch (NoResultException e) {
+			return 0;
+		}
+	}
+	public HashMap<String, Integer> getNumberOfConfirmedUsersByMonth() {
+		HashMap<String, Integer> map = new HashMap<>();
+		List<Object[]> results = em.createNamedQuery("User.getNumberOfConfirmedUsersByMonth").getResultList();
+		for (Object[] result : results) {
+			int year = ((Number) result[0]).intValue(); // Cast seguro, EXTRACT retorna um Number
+			int month = ((Number) result[1]).intValue();
+			Long count = (Long) result[2];
+			String yearMonthKey = year + "-" + String.format("%02d", month); // Formata a chave como "2023-01"
+			map.put(yearMonthKey, count.intValue());
+		}
+		return map;
+	}
+
 }

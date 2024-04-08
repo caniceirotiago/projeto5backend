@@ -4,8 +4,6 @@ import jakarta.persistence.Id;
 import jakarta.xml.bind.annotation.XmlElement;
 
 public class CategoryDto {
-
-
         @XmlElement
         @Id
         int id;
@@ -14,17 +12,13 @@ public class CategoryDto {
         @XmlElement
         private String owner_username;
 
-
     public int getId() {
         return id;
     }
-
     public void setId(int id) {
         this.id = id;
     }
-
     public CategoryDto() {}
-
         public String getType() {
             return type;
         }

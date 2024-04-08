@@ -10,9 +10,11 @@ import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
 import jakarta.ejb.EJB;
+import jakarta.ejb.Stateless;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,9 +26,8 @@ import java.util.List;
  * role in task management within the application, providing a centralized point for task data manipulation and retrieval.
  */
 
-@ApplicationScoped
+@Stateless
 public class TaskBean{
-
     @EJB
     TaskDao taskDao;
     @EJB
@@ -37,6 +38,8 @@ public class TaskBean{
     TaskValidator taskValidator;
     @EJB
     UserDao userDao;
+    @EJB
+    StatisticsBean statisticsBean;
     private TaskEntity convertTaskDtotoTaskEntity(TaskDto taskDto){
         TaskEntity taskEntity=new TaskEntity();
         taskEntity.setTitle(taskDto.getTitle());
@@ -79,6 +82,9 @@ public class TaskBean{
                 taskEntity.setEndDate(taskDto.getEndDate());
             }
             taskDao.persist(taskEntity);
+            statisticsBean.broadcastTaskStatisticsUpdate();
+            statisticsBean.broadcastCategoryStatisticsUpdate();
+            statisticsBean.broadcastUserStatisticsUpdate();
             return true;
         }
         else return false;
@@ -100,7 +106,10 @@ public class TaskBean{
             if(taskDto.getTitle() != null)taskEntity.setTitle(taskDto.getTitle());
             if(taskDto.getDescription() != null)taskEntity.setDescription(taskDto.getDescription());
             if(taskDto.getPriority() != null)taskEntity.setPriority(taskDto.getPriority());
-            if(taskDto.getStatus() != null)taskEntity.setStatus(taskDto.getStatus());
+            if(taskDto.getStatus() != null){
+                taskEntity.setStatus(taskDto.getStatus());
+                taskEntity = updateTimeStamps(taskEntity, taskDto.getStatus());
+            }
             if(taskDto.isDeleted() != null)taskEntity.setDeleted(taskDto.isDeleted());
             if(taskDto.getEndDate()!=null){
                 taskEntity.setEndDate(taskDto.getEndDate());
@@ -109,13 +118,22 @@ public class TaskBean{
                 taskEntity.setStartDate(taskDto.getStartDate());
             }
             taskDao.merge(taskEntity);
+            statisticsBean.broadcastTaskStatisticsUpdate();
             return true;
         }
         return false;
     }
+    public TaskEntity updateTimeStamps(TaskEntity taskEntity, int newStatus){
+        if(newStatus == 200) taskEntity.setDoingTimestamp(LocalDateTime.now());
+        if(newStatus == 300) taskEntity.setDoneTimestamp(LocalDateTime.now());
+        return taskEntity;
+    }
     public boolean deleteTaskPermanently(int id){
         if(taskDao.findTaskById(id)==null) return false;
         taskDao.deleteTask(id);
+        statisticsBean.broadcastTaskStatisticsUpdate();
+        statisticsBean.broadcastCategoryStatisticsUpdate();
+        statisticsBean.broadcastUserStatisticsUpdate();
         return true;
     }
     public boolean deleteTemporarily(int id){
@@ -124,6 +142,7 @@ public class TaskBean{
         if(!taskEntity.isDeleted() ){
             taskEntity.setDeleted(true);
             taskDao.merge(taskEntity);
+
             return true;
         }
         else return false;
@@ -138,10 +157,14 @@ public class TaskBean{
     }
     public void deleteAllTasksByUser(String username){
         taskDao.deleteAllTasksByUser(username);
+        statisticsBean.broadcastTaskStatisticsUpdate();
+        statisticsBean.broadcastCategoryStatisticsUpdate();
+        statisticsBean.broadcastUserStatisticsUpdate();
     }
     /*Tests setters*/
     public void setTaskDao(TaskDao taskDao) {
         this.taskDao = taskDao;
+
     }
 
     public void setUserDao(UserDao userDao) {

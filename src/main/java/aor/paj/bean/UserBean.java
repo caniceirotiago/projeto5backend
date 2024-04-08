@@ -51,6 +51,8 @@ public class UserBean implements Serializable {
     ConfigurationBean configBean;
     @EJB
     EmailService emailService;
+    @EJB
+    StatisticsBean statistiscsBean;
 
     private UserEntity convertUserDtotoUserEntity(User user){
         UserEntity userEntity = new UserEntity();
@@ -94,6 +96,7 @@ public class UserBean implements Serializable {
             emailService.sendConfirmationEmail(user.getEmail(), confirmationToken);
             System.out.println(user);
             userDao.persist(convertUserDtotoUserEntity(user));
+            statistiscsBean.broadcastUserStatisticsUpdate();
             return true;
         } catch (NoResultException e ) {
             return false;
@@ -106,7 +109,9 @@ public class UserBean implements Serializable {
         if (user != null) {
             user.setConfirmationToken(null);
             user.setConfirmed(true);
+            user.setConfirmationTimestamp(Instant.now());
             userDao.updateUser(user);
+            statistiscsBean.broadcastUserStatisticsUpdate();
             return true;
         }
         return false;
@@ -370,6 +375,7 @@ public class UserBean implements Serializable {
         UserEntity user = getUserByToken(token);
         if(user != null){
             user.setToken(null);
+            statistiscsBean.broadcastUserStatisticsUpdate();
             userDao.updateUser(user);
         }
     }
@@ -387,4 +393,5 @@ public class UserBean implements Serializable {
     public int hashCode() {
         return super.hashCode();
     }
+
 }

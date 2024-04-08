@@ -7,8 +7,13 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.TypedQuery;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.IsoFields;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Stateless
 public class TaskDao extends AbstractDao<TaskEntity> {
@@ -73,5 +78,35 @@ public class TaskDao extends AbstractDao<TaskEntity> {
 
 		}
 	}
+	public int getTasksByStatus(int status){
+		try {
+			return em.createNamedQuery("Task.findTasksByStatus", TaskEntity.class)
+					.setParameter("status", status)
+					.getResultList().size();
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return 0;
+	}
+	public List<CategoryEntity> getCategoriesByNumberOfTasks(){
+		try {
+			return em.createNamedQuery("Task.findCategoriesByNumberOfTasks", CategoryEntity.class)
+					.getResultList();
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return null;
+	}
+	public List<TaskEntity> findAllCompletedTasksWithTimestamps(int doneStatus) {
+		return em.createNamedQuery("Task.findAllCompletedTasksWithTimestamps", TaskEntity.class)
+				.setParameter("doneStatus", doneStatus)
+				.getResultList();
+	}
+	public List<LocalDateTime> findAllDoneTimestamps() {
+		return em.createNamedQuery("Task.findAllDoneTimestamps", LocalDateTime.class)
+				.getResultList();
+	}
+
+
 
 }
