@@ -148,6 +148,7 @@ public class UserBean implements Serializable {
         return null;
     }
     public boolean tokenValidator(String token) {
+        System.out.println(token);
         UserEntity user = userDao.findUserByToken(token);
         if (user != null) {
             Instant now = Instant.now();

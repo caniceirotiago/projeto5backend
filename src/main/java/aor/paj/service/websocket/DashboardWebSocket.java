@@ -19,7 +19,7 @@ public class DashboardWebSocket {
     public void onOpen(Session session) {
         sessions.add(session);
         System.out.println("New WebSocket connection: " + session.getId());
-        startHeartbeat(session);
+        //startHeartbeat(session);
     }
 
     @OnClose
