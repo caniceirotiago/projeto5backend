@@ -59,6 +59,7 @@ public class PermissionBean {
         HashSet<Function> developerPermissions = new HashSet<>();
         developerPermissions.add(Function.EDIT_OWN_USER_INFO);
         developerPermissions.add(Function.GET_ALL_CATEGORIES);
+        developerPermissions.add(Function.GET_OTHER_USER_INFO);
 
         rolePermissions.put(userRoleManager.PRODUCT_OWNER, productOwnerPermissions);
         rolePermissions.put(userRoleManager.SCRUM_MASTER, scrumMasterPermissions);

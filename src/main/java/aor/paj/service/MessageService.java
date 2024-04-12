@@ -25,7 +25,9 @@ public class MessageService {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response getMessagesBetweenUsers(@PathParam("sender") String sender, @PathParam("receiver") String receiver) {
+        System.out.println("GET /messages/" + sender + "/" + receiver);
         List<MessageDto> messageDtos = messageBean.getMessagesBetweenUsers(sender, receiver);
+        System.out.println(messageDtos);
         if (messageDtos != null) {
             return Response.status(Response.Status.OK).entity(messageDtos).build();
         } else {

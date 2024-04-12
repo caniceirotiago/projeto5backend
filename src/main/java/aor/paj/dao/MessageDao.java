@@ -16,17 +16,22 @@ public class MessageDao extends AbstractDao<MessageEntity> {
     }
 
     public List<MessageEntity> findMessagesBetweenUsers(UserEntity sender, UserEntity receiver) {
-        TypedQuery<MessageEntity> query = em.createQuery(
-                "SELECT m FROM MessageEntity m WHERE (m.sender = :sender AND m.receiver = :receiver) OR (m.sender = :receiver AND m.receiver = :sender) ORDER BY m.sentAt ASC", MessageEntity.class);
-        query.setParameter("sender", sender);
-        query.setParameter("receiver", receiver);
+        TypedQuery<MessageEntity> query = em.createNamedQuery("MessageEntity.findMessagesBetweenUsers", MessageEntity.class)
+                .setParameter("sender", sender)
+                .setParameter("receiver", receiver);
         return query.getResultList();
     }
 
-    public void markMessagesAsRead(UserEntity receiver, LocalDateTime before) {
-        em.createQuery("UPDATE MessageEntity m SET m.isRead = true WHERE m.receiver = :receiver AND m.sentAt < :before AND m.isRead = false")
-                .setParameter("receiver", receiver)
-                .setParameter("before", before)
+    public boolean markMessagesAsRead(List<Long> messagesIds) {
+        System.out.println("Marking messages as read: " + messagesIds);
+        em.createNamedQuery("MessageEntity.markMessagesAsRead")
+                .setParameter("ids", messagesIds)
                 .executeUpdate();
+        return true;
+    }
+    public List<MessageEntity> findMessagesByIds(List<Long> messagesIds) {
+        TypedQuery<MessageEntity> query = em.createQuery("SELECT m FROM MessageEntity m WHERE m.id IN :ids", MessageEntity.class)
+                .setParameter("ids", messagesIds);
+        return query.getResultList();
     }
 }

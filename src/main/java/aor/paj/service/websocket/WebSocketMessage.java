@@ -3,6 +3,8 @@ package aor.paj.service.websocket;
 public class WebSocketMessage {
     private String type;
     private Object data;
+    public WebSocketMessage() {
+    }
 
     public WebSocketMessage(String type, Object data) {
         this.type = type;
@@ -23,5 +25,13 @@ public class WebSocketMessage {
 
     public void setData(Object data) {
         this.data = data;
+    }
+
+    @Override
+    public String toString() {
+        return "WebSocketMessage{" +
+                "type='" + type + '\'' +
+                ", data=" + data +
+                '}';
     }
 }

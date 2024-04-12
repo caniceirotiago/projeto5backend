@@ -49,4 +49,11 @@ public class MessageBean {
                 entity.isRead()
         );
     }
+    public boolean markMessagesAsRead(List<Long> messagesIds) {
+        return messageDao.markMessagesAsRead(messagesIds);
+    }
+    public List<MessageDto> getMessagesByIds(List<Long> messagesIds) {
+        List<MessageEntity> messages = messageDao.findMessagesByIds(messagesIds);
+        return messages.stream().map(this::convertEntityToDto).collect(Collectors.toList());
+    }
 }

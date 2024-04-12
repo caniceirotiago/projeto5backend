@@ -7,6 +7,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "messages")
+@NamedQuery(name = "MessageEntity.findMessagesBetweenUsers", query = "SELECT m FROM MessageEntity m " +
+        "WHERE (m.sender = :sender AND m.receiver = :receiver) OR (m.sender = :receiver AND m.receiver = :sender) " +
+        "ORDER BY m.sentAt ASC")
+@NamedQuery(name = "MessageEntity.markMessagesAsRead", query = "UPDATE MessageEntity m SET m.isRead = true WHERE m.id IN :ids")
 public class MessageEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
