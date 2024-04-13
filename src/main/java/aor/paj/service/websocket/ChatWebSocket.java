@@ -1,10 +1,12 @@
 package aor.paj.service.websocket;
 
+import aor.paj.bean.NotificationBean;
 import aor.paj.entity.MessageEntity;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
+import jakarta.ejb.EJB;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
@@ -26,6 +28,7 @@ import javax.naming.InitialContext;
 @ServerEndpoint("/chat/{token}")
 public class ChatWebSocket {
 
+
     private static final Map<String, Session> userSessions = new ConcurrentHashMap<>();
     // Inside your WebSocket service
     Gson gson = GsonSetup.createGson();
@@ -33,6 +36,7 @@ public class ChatWebSocket {
 
     private MessageBean messageBean;
     private UserBean userBean;
+    private NotificationBean notificationBean;
 
     @OnOpen
     public void onOpen(Session session, @PathParam("token") String token) {
@@ -41,6 +45,7 @@ public class ChatWebSocket {
             InitialContext ctx = new InitialContext();
             userBean = (UserBean) ctx.lookup("java:module/UserBean");
             messageBean = (MessageBean) ctx.lookup("java:module/MessageBean");
+            notificationBean = (NotificationBean) ctx.lookup("java:module/NotificationBean");
 
             boolean validated = userBean.tokenValidator(token);
             System.out.println("Token received: " + token);
@@ -72,7 +77,6 @@ public class ChatWebSocket {
     @OnMessage
     public void onMessage(String message) {
         try {
-            System.out.println("Message received12: " + message);
             JsonObject json = JsonParser.parseString(message).getAsJsonObject();
             String type = json.get("type").getAsString();
             if (type.equals("markAsRead")) {
@@ -111,6 +115,11 @@ public class ChatWebSocket {
                         Session senderSession = userSessions.get(savedMessage.getSender().getUsername());
                         if (receiverSession != null && receiverSession.isOpen() ) {
                             receiverSession.getBasicRemote().sendText(jsonResponse);
+                        }
+                        else {
+                            System.out.println("Receiver session is null or closed");
+                            notificationBean.createNotification(savedMessage.getReceiver().getUsername(), "message",
+                                     savedMessageDto.getSenderUsername());
                         }
                         if (senderSession != null && senderSession.isOpen()) {
                             senderSession.getBasicRemote().sendText(jsonResponse);

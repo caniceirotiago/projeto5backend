@@ -10,7 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
 
-@Path("/notifications")
+@Path("/notification")
 public class NotificationService {
     @EJB
     private NotificationBean notificationBean;
@@ -21,6 +21,7 @@ public class NotificationService {
     public Response getNotifications(@HeaderParam("Authorization") String authorizationHeader) {
         String token = authorizationHeader != null && authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : null;
         List<NotificationDto> notificationsDtos = notificationBean.getNotifications(token);
+        System.out.println("Notifications found: " + notificationsDtos.size());
         if (notificationsDtos != null) {
             return Response.status(Response.Status.OK).entity(notificationsDtos).build();
         } else {
