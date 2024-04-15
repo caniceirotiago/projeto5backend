@@ -1,17 +1,24 @@
 package aor.paj.service.websocket;
 
-
-
 import aor.paj.bean.NotificationBean;
-import aor.paj.dto.NotificationDto;
+import aor.paj.dto.TaskDto;
+import aor.paj.entity.MessageEntity;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
+import jakarta.ejb.EJB;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
+import aor.paj.dto.MessageDto;
 import aor.paj.bean.MessageBean;
 import aor.paj.bean.UserBean;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import com.google.gson.Gson;
@@ -19,22 +26,23 @@ import util.GsonSetup;
 
 import javax.naming.InitialContext;
 
-@ServerEndpoint("/notification/{token}")
-public class NotificationsWebSocket {
+@ServerEndpoint("/taskws/{token}")
+public class TaskWebSocket {
+
+
     private static final Map<String, Session> userSessions = new ConcurrentHashMap<>();
+    // Inside your WebSocket service
     static Gson gson = GsonSetup.createGson();
-    private MessageBean messageBean;
+
+
     private UserBean userBean;
-    private NotificationBean notificationBean;
 
     @OnOpen
     public void onOpen(Session session, @PathParam("token") String token) {
-        System.out.println("Notification WebSocket connection opened");
+        System.out.println("Chat WebSocket connection opened");
         try {
             InitialContext ctx = new InitialContext();
             userBean = (UserBean) ctx.lookup("java:module/UserBean");
-            messageBean = (MessageBean) ctx.lookup("java:module/MessageBean");
-            notificationBean = (NotificationBean) ctx.lookup("java:module/NotificationBean");
 
             boolean validated = userBean.tokenValidator(token);
             System.out.println("Token received: " + token);
@@ -42,7 +50,7 @@ public class NotificationsWebSocket {
             String username = validated ? userBean.getUserByToken(token).getUsername() : null;
             if (username != null) {
                 userSessions.put(username, session);
-                System.out.println("Notification WebSocket connection opened for user: " + username);
+                System.out.println("Task WebSocket connection opened for user: " + username);
             } else {
                 session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "Unauthorized"));
             }
@@ -50,48 +58,36 @@ public class NotificationsWebSocket {
             e.printStackTrace();
         }
     }
+
     @OnClose
     public void onClose(Session session, @PathParam("token") String token) {
-        String username = userBean.getUserByToken(token).getUsername(); // Obtém o nome de usuário do token
+        String username = userBean.getUserByToken(token).getUsername();
         userSessions.remove(username);
-        System.out.println("Notification WebSocket connection closed for user: " + username);
+        System.out.println("Task WebSocket connection closed for user: " + username);
     }
 
     @OnError
     public void onError(Session session, Throwable throwable) {
-        System.out.println("Notification error: " + throwable.getMessage());
+        System.out.println("WebSocket error: " + throwable.getMessage());
     }
 
     @OnMessage
     public void onMessage(String message) {
         try {
-            System.out.println("Received message: " + message);
             JsonObject json = JsonParser.parseString(message).getAsJsonObject();
             String type = json.get("type").getAsString();
-            System.out.println("Type: " + type);
 
         } catch (Exception e) {
-            System.err.println("Error processing Notification: " + e.getMessage());
+            System.err.println("Error processing message: " + e.getMessage());
         }
     }
-    public static void sendNotification(NotificationDto notification) {
-        String receiverUsername = notification.getUserId();
-        Session receiverSession = userSessions.get(receiverUsername);
-        if (receiverSession != null && receiverSession.isOpen()) {
-            try {
-                receiverSession.getBasicRemote().sendText(gson.toJson(new WebSocketMessage("receivedNotification", notification)));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
 
-    }
-
-    public static void broadcast(String message) {
+    public static void broadcast(String actionType, TaskDto task) {
+        //actionType could be "createTask", "updatedTask", the temporary delete is a type of update
         userSessions.values().forEach(session -> {
             if (session.isOpen()) {
                 try {
-                    session.getBasicRemote().sendText(message);
+                    session.getBasicRemote().sendText(gson.toJson(new WebSocketMessage(actionType, task)));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

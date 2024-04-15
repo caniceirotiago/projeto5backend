@@ -9,6 +9,7 @@ import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
+import aor.paj.service.websocket.TaskWebSocket;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -85,6 +86,8 @@ public class TaskBean{
             statisticsBean.broadcastTaskStatisticsUpdate();
             statisticsBean.broadcastCategoryStatisticsUpdate();
             statisticsBean.broadcastUserStatisticsUpdate();
+            TaskDto addedDto = convertTaskEntitytoTaskDto(taskEntity);
+            TaskWebSocket.broadcast("createTask", addedDto);
             return true;
         }
         else return false;
@@ -119,6 +122,9 @@ public class TaskBean{
             }
             taskDao.merge(taskEntity);
             statisticsBean.broadcastTaskStatisticsUpdate();
+            statisticsBean.broadcastCategoryStatisticsUpdate();
+            TaskDto updatedDto = convertTaskEntitytoTaskDto(taskEntity);
+            TaskWebSocket.broadcast("updatedTask", updatedDto);
             return true;
         }
         return false;
@@ -142,6 +148,8 @@ public class TaskBean{
         if(!taskEntity.isDeleted() ){
             taskEntity.setDeleted(true);
             taskDao.merge(taskEntity);
+            TaskDto deletedDto = convertTaskEntitytoTaskDto(taskEntity);
+            TaskWebSocket.broadcast("deleteTask", deletedDto);
 
             return true;
         }
