@@ -4,6 +4,7 @@ import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.CategoryDto;
 import aor.paj.dto.Statistics.CategoryStatisticsDTO;
+import aor.paj.dto.Statistics.IndividualUserStatisticsDto;
 import aor.paj.dto.Statistics.TasksStatisticsDTO;
 import aor.paj.dto.Statistics.UsersStatisticsDTO;
 import aor.paj.entity.CategoryEntity;
@@ -129,5 +130,13 @@ public class StatisticsBean {
         CategoryStatisticsDTO categoriesStats = createCategoryStatisticsDTO();
         String jsonCategoriesStats = gson.toJson(new WebSocketMessage("categoryStatistics", categoriesStats));
         DashboardWebSocket.broadcast(jsonCategoriesStats);
+    }
+    public IndividualUserStatisticsDto createIndividualUserStatisticsDTO(String username) {
+        IndividualUserStatisticsDto dto = new IndividualUserStatisticsDto();
+        dto.setDoingTasks(taskDao.getNTasksByStatusAndUser(taskStatusManager.DOING, username));
+        dto.setDoneTasks(taskDao.getNTasksByStatusAndUser(taskStatusManager.DONE, username));
+        dto.setTodoTasks(taskDao.getNTasksByStatusAndUser(taskStatusManager.TODO, username));
+        dto.setUsername(username);
+        return dto;
     }
 }

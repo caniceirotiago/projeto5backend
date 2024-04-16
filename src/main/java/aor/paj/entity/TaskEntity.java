@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 @Table (name="task")
 @NamedQuery(name="Task.findTasksByStatus", query="SELECT t FROM TaskEntity t " +
         "WHERE t.status=:status")
+@NamedQuery(name="Task.findNOfTasksByStatusAndUser", query="SELECT COUNT(t) FROM TaskEntity t " +
+        "WHERE t.status=:status AND t.user.username=:username")
 @NamedQuery(name="Task.findCategoriesByNumberOfTasks", query="SELECT t.category FROM TaskEntity t " +
         "GROUP BY t.category " +
         "ORDER BY COUNT(t.category) DESC")
@@ -185,4 +187,6 @@ public class TaskEntity implements Serializable {
                 ", deleted=" + deleted +
                 '}';
     }
+
+
 }

@@ -5,6 +5,7 @@ import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 
 import java.time.Duration;
@@ -106,7 +107,10 @@ public class TaskDao extends AbstractDao<TaskEntity> {
 		return em.createNamedQuery("Task.findAllDoneTimestamps", LocalDateTime.class)
 				.getResultList();
 	}
-
-
-
+	public int getNTasksByStatusAndUser(int status, String username) {
+		Query query = em.createNamedQuery("Task.findNOfTasksByStatusAndUser")
+				.setParameter("status", status)
+				.setParameter("username", username);
+		return ((Number) query.getSingleResult()).intValue();
+	}
 }

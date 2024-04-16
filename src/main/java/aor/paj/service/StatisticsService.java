@@ -1,10 +1,7 @@
 package aor.paj.service;
 
 import aor.paj.bean.StatisticsBean;
-import aor.paj.dto.Statistics.CategoryStatisticsDTO;
-import aor.paj.dto.Statistics.DashboardDTO;
-import aor.paj.dto.Statistics.TasksStatisticsDTO;
-import aor.paj.dto.Statistics.UsersStatisticsDTO;
+import aor.paj.dto.Statistics.*;
 
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
@@ -29,5 +26,14 @@ public class StatisticsService {
         CategoryStatisticsDTO categoryDTO = statisticsBean.createCategoryStatisticsDTO();
         DashboardDTO dashboardDTO = new DashboardDTO(usersDTO, tasksDTO, categoryDTO);
         return Response.ok(dashboardDTO).build();
+    }
+    @GET
+    @Path("/individualstats/{username}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getIndividualStats(@PathParam("username") String username) {
+        IndividualUserStatisticsDto usersDTO = statisticsBean.createIndividualUserStatisticsDTO(username);
+        System.out.println(usersDTO);
+
+        return Response.ok(usersDTO).build();
     }
 }
