@@ -4,7 +4,6 @@ import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.User;
 import aor.paj.entity.UserEntity;
-import aor.paj.service.validator.UserValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -30,8 +29,7 @@ class UserBeanTest {
     private UserEntity testUser;
     @Mock
     private User testUserUP;
-    @Mock
-    private UserValidator userValidator;
+
 
     @BeforeEach
     void setUp() {

@@ -14,6 +14,7 @@ import aor.paj.exception.DuplicateUserException;
 import aor.paj.service.EmailService;
 import aor.paj.service.status.userRoleManager;
 import jakarta.ejb.EJB;
+import jakarta.ejb.Singleton;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
 import util.HashUtil;

@@ -1,5 +1,6 @@
 package aor.paj.service.websocket;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 
@@ -9,7 +10,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.Set;
-
+@ApplicationScoped
 @ServerEndpoint("/dashboard")
 public class DashboardWebSocket {
     private static final Set<Session> sessions = new CopyOnWriteArraySet<>();

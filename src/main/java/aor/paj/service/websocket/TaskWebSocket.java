@@ -8,6 +8,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import jakarta.ejb.EJB;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
@@ -25,7 +27,7 @@ import com.google.gson.Gson;
 import util.GsonSetup;
 
 import javax.naming.InitialContext;
-
+@ApplicationScoped
 @ServerEndpoint("/taskws/{token}")
 public class TaskWebSocket {
 
@@ -34,16 +36,13 @@ public class TaskWebSocket {
     // Inside your WebSocket service
     static Gson gson = GsonSetup.createGson();
 
-
+    @EJB
     private UserBean userBean;
 
     @OnOpen
     public void onOpen(Session session, @PathParam("token") String token) {
         System.out.println("Chat WebSocket connection opened");
         try {
-            InitialContext ctx = new InitialContext();
-            userBean = (UserBean) ctx.lookup("java:module/UserBean");
-
             boolean validated = userBean.tokenValidator(token);
             System.out.println("Token received: " + token);
             System.out.println("Token validated: " + validated);

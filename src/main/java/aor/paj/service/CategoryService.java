@@ -9,6 +9,7 @@ import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import aor.paj.service.status.userRoleManager;
 import filters.RequiresPermission;
+import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -20,9 +21,9 @@ import java.util.List;
 @Path("/category")
 public class CategoryService {
 
-    @Inject
+    @EJB
     UserBean userBean;
-    @Inject
+    @EJB
     CategoryBean categoryBean;
 
     /**

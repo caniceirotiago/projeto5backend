@@ -6,6 +6,9 @@ import aor.paj.bean.NotificationBean;
 import aor.paj.dto.NotificationDto;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import jakarta.ejb.EJB;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
@@ -18,24 +21,23 @@ import com.google.gson.Gson;
 import util.GsonSetup;
 
 import javax.naming.InitialContext;
-
+@ApplicationScoped
 @ServerEndpoint("/notification/{token}")
 public class NotificationsWebSocket {
     private static final Map<String, Session> userSessions = new ConcurrentHashMap<>();
     static Gson gson = GsonSetup.createGson();
+    @Inject
     private MessageBean messageBean;
+    @EJB
     private UserBean userBean;
+    @Inject
     private NotificationBean notificationBean;
 
     @OnOpen
     public void onOpen(Session session, @PathParam("token") String token) {
+
         System.out.println("Notification WebSocket connection opened");
         try {
-            InitialContext ctx = new InitialContext();
-            userBean = (UserBean) ctx.lookup("java:module/UserBean");
-            messageBean = (MessageBean) ctx.lookup("java:module/MessageBean");
-            notificationBean = (NotificationBean) ctx.lookup("java:module/NotificationBean");
-
             boolean validated = userBean.tokenValidator(token);
             System.out.println("Token received: " + token);
             System.out.println("Token validated: " + validated);

@@ -1,6 +1,10 @@
 package aor.paj.dto;
 
+import jakarta.ejb.EJB;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.time.LocalDate;
@@ -15,20 +19,32 @@ import java.time.format.DateTimeParseException;
 
 @XmlRootElement
 public class TaskDto {
+    private static final String STATUS_REGEX = "(100|200|300)";
+
     @XmlElement
     private LocalDate startDate;
     @XmlElement
     private LocalDate endDate;
     @XmlElement
     private int id;
+    @NotNull
+    @Size(min = 3, max = 50, message = "Title must be between 3 and 50 characters")
     @XmlElement
     private String title;
+    @NotNull
+    @Size(min = 3, max = 400, message = "Description must be between 3 and 400 characters")
     @XmlElement
     private String description;
+    @NotNull
+    @Size(min = 1, max = 3, message = "Priority must be between 1 and 3")
     @XmlElement
     private Integer priority;
+    @NotNull
+    @Pattern(regexp = STATUS_REGEX, message = "Status must be 100, 200, or 300")
     @XmlElement
     private Integer status;
+    @NotNull
+    @Size(min = 2, max = 25, message = "Username must be between 2 and 25 characters")
     @XmlElement
     private String username_author;
     @XmlElement
@@ -120,7 +136,15 @@ public class TaskDto {
     public void setUsername_author(String username_author) {
         this.username_author = username_author;
     }
-
+    @AssertTrue(message = "End date must be after start date")
+    private boolean isEndDateAfterStartDate() {
+        if (startDate == null || endDate == null) {
+            // Se uma das datas não estiver definida, a validação passa
+            return true;
+        }
+        // Retorna true se a data de término for após a data de início
+        return endDate.isAfter(startDate);
+    }
     @Override
     public String toString() {
         return "TaskDto{" +

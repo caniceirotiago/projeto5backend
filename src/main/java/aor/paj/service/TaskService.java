@@ -6,9 +6,10 @@ import aor.paj.bean.UserBean;
 import aor.paj.dto.TaskDto;
 import aor.paj.entity.TaskEntity;
 import aor.paj.service.status.Function;
-import aor.paj.service.validator.TaskValidator;
 import filters.RequiresPermission;
+import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -19,13 +20,11 @@ import java.util.List;
 
 @Path("/tasks")
 public class TaskService {
-    @Inject
+    @EJB
     TaskBean taskBean;
-    @Inject
-    TaskValidator taskValidator;
-    @Inject
+    @EJB
     UserBean userBean;
-    @Inject
+    @EJB
     PermissionBean permissionBean;
 
 
@@ -43,14 +42,12 @@ public class TaskService {
     @POST
     @Path("")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createTask(@HeaderParam("Authorization") String authHeader,  TaskDto a) {
+    public Response createTask(@Valid @HeaderParam("Authorization") String authHeader, TaskDto a) {
         String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        if (taskValidator.validateTask(a)) {
-            String categoryName = a.getCategory_type();
-            if(taskBean.addTask(token,categoryName,a)){
-                return Response.status(200).entity("{\"message\":\"Task Created\"}").build();
-            }return Response.status(400).entity("Invalid task type").build();
-        }return Response.status(400).entity("Invalid task data").build();
+        String categoryName = a.getCategory_type();
+        if(taskBean.addTask(token,categoryName,a)){
+            return Response.status(200).entity("{\"message\":\"Task Created\"}").build();
+        }return Response.status(400).entity("Invalid task type").build();
     }
 
     /**
@@ -68,8 +65,9 @@ public class TaskService {
     @PATCH
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response editTask( @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) {
+    public Response editTask(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) {
         String token = authorizationHeader.substring("Bearer ".length());
+
         if (taskBean.taskIdValidator(id)) {
             if(permissionBean.getPermissionByTaskID(token, id) || taskDto.getStatus() != null) {
                 if (taskBean.editTask(id, taskDto)) {

@@ -4,7 +4,6 @@ import aor.paj.bean.UserBean;
 import aor.paj.dto.*;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
-import aor.paj.service.validator.UserValidator;
 import filters.RequiresPermission;
 import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
@@ -22,8 +21,6 @@ import java.util.List;
 public class UserService {
     @EJB
     UserBean userBean;
-    @Inject
-    UserValidator userValidator;
 
     /**
      * This endpoint is responsible for adding a new user to the system. It accepts JSON-formatted requests
@@ -81,7 +78,7 @@ public class UserService {
     @POST
     @Path("/reset-password")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response resetPassword(ResetPasswordDTO resetPasswordDto) {
+    public Response resetPassword(@Valid ResetPasswordDTO resetPasswordDto) {
         try {
             boolean resetResult = userBean.resetPassword(resetPasswordDto.getToken(), resetPasswordDto.getNewPassword());
             if (resetResult) {
@@ -195,16 +192,13 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.EDIT_OWN_USER_INFO)
-    public Response editUserData(User updatedUser, @HeaderParam("Authorization") String authHeader) {
+    public Response editUserData(@Valid User updatedUser, @HeaderParam("Authorization") String authHeader) {
         String token = authHeader.substring(7);
-        if (userValidator.validateUserOnEdit(updatedUser) && updatedUser.getUsername() == null) {
-            if (!userBean.checkIfUsernameExists(updatedUser.getUsername())) {
-                boolean updateResult = userBean.updateUser(token, updatedUser);
-                if (updateResult) return Response.status(200).entity("{\"message\":\"User Updated\"}").build();
-                else return Response.status(500).entity("An error occurred while updating user data").build();
-            }return Response.status(409).entity("Username or Email already Exists").build();
-        }return Response.status(400).entity("Invalid Data").build();
-
+        if (!userBean.checkIfUsernameExists(updatedUser.getUsername())) {
+            boolean updateResult = userBean.updateUser(token, updatedUser);
+            if (updateResult) return Response.status(200).entity("{\"message\":\"User Updated\"}").build();
+            else return Response.status(500).entity("An error occurred while updating user data").build();
+        }return Response.status(409).entity("Username or Email already Exists").build();
     }
 
     /**
@@ -217,18 +211,16 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
      @Produces(MediaType.APPLICATION_JSON)
      @RequiresPermission(Function.EDIT_OTHER_USER_INFO)
-    public Response adminEditUserData(User updatedUser, @HeaderParam("userToChangeUsername") String username) {
-        if (userValidator.validateUserOnEdit(updatedUser) && updatedUser.getUsername() == null)  {
-            if (userBean.checkIfUsernameExists(username)) {
-                if(!userBean.checkIfEmailExists(updatedUser.getEmail())) {
-                    boolean updateResult = userBean.updateUserByUsername(username, updatedUser);
-                    if (updateResult)
-                        return Response.status(200).entity("{\"message\":\"User data updated successfully\"}").build();
-                    else
-                        return Response.status(400).entity("An error occurred while updating user data").build();
-                } return Response.status(409).entity("Username or Email already Exists").build();
-            }return Response.status(409).entity("Username do not Exists").build();
-        }return Response.status(400).entity("Invalid Data").build();
+    public Response adminEditUserData(@Valid User updatedUser, @HeaderParam("userToChangeUsername") String username) {
+         if (userBean.checkIfUsernameExists(username)) {
+             if(!userBean.checkIfEmailExists(updatedUser.getEmail())) {
+                 boolean updateResult = userBean.updateUserByUsername(username, updatedUser);
+                 if (updateResult)
+                     return Response.status(200).entity("{\"message\":\"User data updated successfully\"}").build();
+                 else
+                     return Response.status(400).entity("An error occurred while updating user data").build();
+             } return Response.status(409).entity("Username or Email already Exists").build();
+         }return Response.status(409).entity("Username do not Exists").build();
     }
 
     /**
@@ -239,15 +231,13 @@ public class UserService {
     @POST
     @Path("/password")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response editUserPassword(UserNewPassword updatedPassword, @HeaderParam("Authorization") String authHeader) {
+    public Response editUserPassword(@Valid UserNewPassword updatedPassword, @HeaderParam("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         if (userBean.oldPasswordConfirmation(token, updatedPassword.getPassword(),
                 updatedPassword.getNewPassword())) {
-            if (userValidator.validatePassword(updatedPassword.getNewPassword())) {
-                boolean updateResult = userBean.updatePassWord(token, updatedPassword.getNewPassword());
-                if (updateResult) return Response.status(200).entity("{\"message\":\"User password updated successfully\"}").build();
-                else return Response.status(500).entity("An error occurred while updating user password").build();
-            }return Response.status(400).entity("Invalid Data").build();
+            boolean updateResult = userBean.updatePassWord(token, updatedPassword.getNewPassword());
+            if (updateResult) return Response.status(200).entity("{\"message\":\"User password updated successfully\"}").build();
+            else return Response.status(500).entity("An error occurred while updating user password").build();
         }return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
     }
 

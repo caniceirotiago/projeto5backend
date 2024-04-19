@@ -22,7 +22,7 @@ public class CategoryBean implements Serializable {
     CategoryDao categoryDao;
     @EJB
     UserBean userBean;
-    @Inject
+    @EJB
     TaskBean taskBean;
     @EJB
     StatisticsBean statisticsBean;

@@ -1,6 +1,7 @@
 package aor.paj.bean;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.ejb.EJB;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
 import jakarta.inject.Inject;
@@ -8,11 +9,11 @@ import jakarta.inject.Inject;
 @Singleton
 @Startup
 public class StartupBean {
-    @Inject
+    @EJB
     UserBean userBean;
-    @Inject
+    @EJB
     CategoryBean categoryBean;
-    @Inject
+    @EJB
     ConfigurationBean configurationBean;
 
     @PostConstruct

@@ -5,6 +5,7 @@ import aor.paj.bean.UserBean;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import jakarta.annotation.Priority;
+import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -19,12 +20,12 @@ import java.lang.reflect.Method;
 @Provider
 @Priority(Priorities.AUTHORIZATION)
 public class AuthFilter implements ContainerRequestFilter {
-    @Inject
+    @EJB
     private UserBean userBean;
 
     @Context
     private ResourceInfo resourceInfo;
-    @Inject
+    @EJB
     private PermissionBean permissionBean;
 
     @Override

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="antNest" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="antNest">
+        <serverdata>
+          <mappings>
+            <mapping deploy="http://localhost:8080/projeto5backend" local="$PROJECT_DIR$" web="projeto5backend" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

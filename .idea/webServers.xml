@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="104aa0ed-3620-49da-ab5e-15efd7ce862f" name="antNest" url="http://localhost">
+        <fileTransfer mountedRoot="$PROJECT_DIR$/../../wildfly-30.0.1.Final/standalone/deployments" accessType="MOUNT" port="0" />
+      </webServer>
+    </option>
+  </component>
+</project>

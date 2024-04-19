@@ -7,7 +7,6 @@ import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
-import aor.paj.service.validator.TaskValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -33,8 +32,7 @@ class TaskBeanTest {
     @Mock
     private CategoryDao categoryDao;
 
-    @Mock
-    private TaskValidator taskValidator;
+
 
     @Mock
     private UserBean userBean;
@@ -73,7 +71,6 @@ class TaskBeanTest {
         when(userDao.findUserByUsername(anyString())).thenReturn(testUser);
         when(categoryDao.findCategoryByType(anyString())).thenReturn(testCategory);
         when(taskDao.findTaskById(anyInt())).thenReturn(testTask);
-        when(taskValidator.validateTask(any(TaskDto.class))).thenReturn(true);
     }
 
     @Test
@@ -148,11 +145,8 @@ class TaskBeanTest {
         newTaskDto.setCategory_type(testCategory.getType());
         newTaskDto.setUsername_author(testUser.getUsername());
 
-        when(taskValidator.validateTask(any(TaskDto.class))).thenReturn(false); // Simula falha na validação
 
-        boolean result = taskValidator.validateTask(newTaskDto);
-        assertFalse(result, "Task should not be added due to invalid data");
-        verify(taskDao, never()).persist(any(TaskEntity.class)); // Assegura que persist nunca é chamado
+
     }
 
     @Test

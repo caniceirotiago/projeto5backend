@@ -1,7 +1,13 @@
 package aor.paj.dto;
 
+import jakarta.ejb.EJB;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public class ResetPasswordDTO {
     private String token;
+    @NotNull
+    @Size(min = 4, message = "Password must be greater than 4 characters")
     private String newPassword;
 
     // Constructors

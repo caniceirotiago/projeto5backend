@@ -1,5 +1,6 @@
 package aor.paj.bean;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import aor.paj.dao.ConfigurationDao;
@@ -8,7 +9,7 @@ import aor.paj.entity.ConfigurationEntity;
 @Stateless
 public class ConfigurationBean {
 
-    @Inject
+    @EJB
     private ConfigurationDao configurationDao;
 
     public void initializeDefaultConfigurations() {

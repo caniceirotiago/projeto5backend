@@ -8,7 +8,6 @@ import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
-import aor.paj.service.validator.TaskValidator;
 import aor.paj.service.websocket.TaskWebSocket;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
@@ -35,8 +34,6 @@ public class TaskBean{
     UserBean userBean;
     @EJB
     CategoryDao categoryDao;
-    @Inject
-    TaskValidator taskValidator;
     @EJB
     UserDao userDao;
     @EJB
@@ -101,33 +98,29 @@ public class TaskBean{
         else return true;
     }
     public boolean editTask(int id, TaskDto taskDto){
-        if(taskDto == null || id < 0) return false;
-        if(taskValidator.validateTask(taskDto)){
-            TaskEntity taskEntity=taskDao.findTaskById(id);
-            if(taskEntity==null) return false;
-            if(taskDto.getCategory_type() != null)taskEntity.setCategory(categoryDao.findCategoryByType(taskDto.getCategory_type()));
-            if(taskDto.getTitle() != null)taskEntity.setTitle(taskDto.getTitle());
-            if(taskDto.getDescription() != null)taskEntity.setDescription(taskDto.getDescription());
-            if(taskDto.getPriority() != null)taskEntity.setPriority(taskDto.getPriority());
-            if(taskDto.getStatus() != null){
-                taskEntity.setStatus(taskDto.getStatus());
-                taskEntity = updateTimeStamps(taskEntity, taskDto.getStatus());
-            }
-            if(taskDto.isDeleted() != null)taskEntity.setDeleted(taskDto.isDeleted());
-            if(taskDto.getEndDate()!=null){
-                taskEntity.setEndDate(taskDto.getEndDate());
-            }
-            if(taskDto.getStartDate()!=null){
-                taskEntity.setStartDate(taskDto.getStartDate());
-            }
-            taskDao.merge(taskEntity);
-            statisticsBean.broadcastTaskStatisticsUpdate();
-            statisticsBean.broadcastCategoryStatisticsUpdate();
-            TaskDto updatedDto = convertTaskEntitytoTaskDto(taskEntity);
-            TaskWebSocket.broadcast("updatedTask", updatedDto);
-            return true;
+        if(taskDto == null || id < 0) return false; TaskEntity taskEntity=taskDao.findTaskById(id);
+        if(taskEntity==null) return false;
+        if(taskDto.getCategory_type() != null)taskEntity.setCategory(categoryDao.findCategoryByType(taskDto.getCategory_type()));
+        if(taskDto.getTitle() != null)taskEntity.setTitle(taskDto.getTitle());
+        if(taskDto.getDescription() != null)taskEntity.setDescription(taskDto.getDescription());
+        if(taskDto.getPriority() != null)taskEntity.setPriority(taskDto.getPriority());
+        if(taskDto.getStatus() != null){
+            taskEntity.setStatus(taskDto.getStatus());
+            taskEntity = updateTimeStamps(taskEntity, taskDto.getStatus());
         }
-        return false;
+        if(taskDto.isDeleted() != null)taskEntity.setDeleted(taskDto.isDeleted());
+        if(taskDto.getEndDate()!=null){
+            taskEntity.setEndDate(taskDto.getEndDate());
+        }
+        if(taskDto.getStartDate()!=null){
+            taskEntity.setStartDate(taskDto.getStartDate());
+        }
+        taskDao.merge(taskEntity);
+        statisticsBean.broadcastTaskStatisticsUpdate();
+        statisticsBean.broadcastCategoryStatisticsUpdate();
+        TaskDto updatedDto = convertTaskEntitytoTaskDto(taskEntity);
+        TaskWebSocket.broadcast("updatedTask", updatedDto);
+        return true;
     }
     public TaskEntity updateTimeStamps(TaskEntity taskEntity, int newStatus){
         if(newStatus == 200) taskEntity.setDoingTimestamp(LocalDateTime.now());

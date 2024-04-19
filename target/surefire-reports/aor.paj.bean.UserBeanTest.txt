@@ -1,4 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: aor.paj.bean.UserBeanTest
 -------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.076 s - in aor.paj.bean.UserBeanTest
+Tests run: 8, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.073 s <<< FAILURE! - in aor.paj.bean.UserBeanTest
+testRegisterUser_Success  Time elapsed: 0.003 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "aor.paj.service.EmailService.sendConfirmationEmail(String, String)" because "<local3>.emailService" is null
+	at aor.paj.bean.UserBeanTest.testRegisterUser_Success(UserBeanTest.java:70)
+

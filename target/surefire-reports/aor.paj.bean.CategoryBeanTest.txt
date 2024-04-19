@@ -1,4 +1,16 @@
 -------------------------------------------------------------------------------
 Test set: aor.paj.bean.CategoryBeanTest
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.605 s - in aor.paj.bean.CategoryBeanTest
+Tests run: 7, Failures: 0, Errors: 3, Skipped: 0, Time elapsed: 0.605 s <<< FAILURE! - in aor.paj.bean.CategoryBeanTest
+testDeleteCategory_Success  Time elapsed: 0.006 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "aor.paj.bean.StatisticsBean.broadcastCategoryStatisticsUpdate()" because "this.statisticsBean" is null
+	at aor.paj.bean.CategoryBeanTest.testDeleteCategory_Success(CategoryBeanTest.java:94)
+
+testEditCategory_Success  Time elapsed: 0.003 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "aor.paj.bean.StatisticsBean.broadcastCategoryStatisticsUpdate()" because "this.statisticsBean" is null
+	at aor.paj.bean.CategoryBeanTest.testEditCategory_Success(CategoryBeanTest.java:77)
+
+testAddCategory_Success  Time elapsed: 0.005 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "aor.paj.bean.StatisticsBean.broadcastCategoryStatisticsUpdate()" because "this.statisticsBean" is null
+	at aor.paj.bean.CategoryBeanTest.testAddCategory_Success(CategoryBeanTest.java:58)
+
