@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "messages")
+@NamedQuery(name = "MessageEntity.deleteMessageById", query = "DELETE FROM MessageEntity m WHERE m.id = :id")
+@NamedQuery(name = "MessageEntity.getMessages", query = "SELECT m FROM MessageEntity m WHERE m.receiver = :user OR m.sender = :user")
 @NamedQuery(name = "MessageEntity.findMessagesBetweenUsers", query = "SELECT m FROM MessageEntity m " +
         "WHERE (m.sender = :sender AND m.receiver = :receiver) OR (m.sender = :receiver AND m.receiver = :sender) " +
         "ORDER BY m.sentAt ASC")

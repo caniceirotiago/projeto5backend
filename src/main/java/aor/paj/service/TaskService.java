@@ -62,7 +62,7 @@ public class TaskService {
      * If the task data provided is incorrect, it returns a status code of 400 (Bad Request) with the message
      * "Wrong data".
      */
-    @PATCH
+    @POST
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response editTask(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) {

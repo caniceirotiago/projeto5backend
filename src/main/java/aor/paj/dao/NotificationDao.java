@@ -21,4 +21,10 @@ public class NotificationDao extends AbstractDao<NotificationEntity> {
                 .setParameter("user", user);
         return query.getResultList();
     }
+    public boolean deleteNotificationById(Long notificationId) {
+        em.createNamedQuery("NotificationEntity.deleteNotificationById")
+                .setParameter("id", notificationId)
+                .executeUpdate();
+        return true;
+    }
 }

@@ -3,6 +3,7 @@ package filters;
 import aor.paj.bean.PermissionBean;
 import aor.paj.bean.UserBean;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.UserNotFoundException;
 import aor.paj.service.status.Function;
 import jakarta.annotation.Priority;
 import jakarta.ejb.EJB;
@@ -35,16 +36,21 @@ public class AuthFilter implements ContainerRequestFilter {
                 || path.endsWith("/register")
                 || path.contains("/confirm")
                 || path.contains("/request-password-reset")
-                || path.contains("/reset-password")) {
+                || path.contains("/reset-password")
+                || path.contains("/request-confirmation-email")) {
             return;
         }
         String authHeader = requestContext.getHeaderString("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            if (userBean.tokenValidator(token)) {
-                checkAuthorization(requestContext, token);
-            } else {
-                abortUnauthorized(requestContext);
+            try {
+                if (userBean.tokenValidator(token)) {
+                    checkAuthorization(requestContext, token);
+                } else {
+                    abortUnauthorized(requestContext);
+                }
+            } catch (UserNotFoundException e) {
+                throw new RuntimeException(e);
             }
         } else {
             abortUnauthorized(requestContext);

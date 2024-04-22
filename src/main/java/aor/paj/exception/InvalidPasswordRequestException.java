@@ -3,8 +3,9 @@ package aor.paj.exception;
 import jakarta.ejb.ApplicationException;
 
 @ApplicationException(rollback = true)
-public class InvalidLoginException extends Exception {
-    public InvalidLoginException(String message) {
+public class InvalidPasswordRequestException extends Exception {
+    public InvalidPasswordRequestException(String message) {
         super(message);
     }
 }
+

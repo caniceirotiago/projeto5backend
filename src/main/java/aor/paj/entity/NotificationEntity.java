@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "notification")
 @NamedQueries({
+        @NamedQuery(name = "NotificationEntity.deleteNotificationById", query = "DELETE FROM NotificationEntity n WHERE n.id = :id"),
         @NamedQuery(name = "NotificationEntity.getNotifications", query = "SELECT n FROM NotificationEntity n WHERE n.user = :user")
 })
 

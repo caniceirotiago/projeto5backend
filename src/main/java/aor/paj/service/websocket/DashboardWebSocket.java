@@ -38,7 +38,6 @@ public class DashboardWebSocket {
     }
 
     public static void broadcast(String message) {
-        System.out.println(sessions.size() + " sessions");
         for (Session session : sessions) {
             if (session.isOpen()) {
                 session.getAsyncRemote().sendText(message);

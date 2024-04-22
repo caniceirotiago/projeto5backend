@@ -32,6 +32,16 @@ public class TaskDao extends AbstractDao<TaskEntity> {
 		}
 
 	}
+	public List<TaskEntity> getTasksByUser(String username) {
+		try {
+			return em.createNamedQuery("Task.findAllTasksByUsername", TaskEntity.class)
+					.setParameter("username", username)
+					.getResultList();
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return null;
+	}
 
 	public List<TaskEntity> getTasksByFilter(boolean deleted, String username, String category_type) {
 		List<TaskEntity> tasks = new ArrayList<>();

@@ -2,26 +2,19 @@ package aor.paj.service;
 
 import aor.paj.bean.UserBean;
 import aor.paj.dto.*;
-import aor.paj.entity.UserEntity;
+import aor.paj.exception.*;
 import aor.paj.service.status.Function;
 import filters.RequiresPermission;
 import jakarta.ejb.EJB;
-import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
-import java.net.URI;
 import java.util.List;
 
-
 @Path("/users")
-
 public class UserService {
     @EJB
     UserBean userBean;
-
     /**
      * This endpoint is responsible for adding a new user to the system. It accepts JSON-formatted requests
      * containing user data and processes the request accordingly.
@@ -34,64 +27,25 @@ public class UserService {
      */
     @POST
     @Path("/register")
-    @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response addUser(@Valid User user) {
-        boolean isRegistered = userBean.register(user);
-        if (isRegistered) {
-            return Response.status(Response.Status.CREATED).entity("{\"message\":\"User registered successfully\"}").build();
-        } else {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"User registration failed\"}").build();
-        }
-    }
+    public void addUser(@Valid User user) throws DuplicateUserException {userBean.register(user);}
 
-    @Path("/confirm")
     @POST
-    public Response confirmRegistration(@QueryParam("token") String token) {
-        System.out.println(token);
-        if (token == null || token.trim().isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Confirmation token invalid or not existent.").build();
-        }
-        if (userBean.confirmUser(token)) {
-
-            return Response.ok("{\"message\":\"Account confirmed.\"}")
-                    .build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).entity("Confirmation token invalid.").build();
-        }
-    }
+    @Path("/confirm")
+    public void confirmRegistration(@QueryParam("token") String token) throws UserConfirmationException {
+        userBean.confirmUser(token);}
     @POST
     @Path("/request-password-reset")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response requestPasswordReset(ResetPasswordRequestDTO requestPasswordResetDto) {
-        try {
-            boolean requestResult = userBean.requestPasswordReset(requestPasswordResetDto.getEmail());
-            if (requestResult) {
-                return Response.ok().entity("{\"message\":\"Instruções de redefinição de senha enviadas para o seu email.\"}").build();
-            } else {
-                return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Falha ao solicitar redefinição de senha.\"}").build();
-            }
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"message\":\"Erro interno do servidor.\"}").build();
-        }
+    public void requestPasswordReset(ResetPasswordRequestDTO requestPasswordResetDto) throws InvalidPasswordRequestException {
+        userBean.requestPasswordReset(requestPasswordResetDto.getEmail());
     }
     @POST
     @Path("/reset-password")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response resetPassword(@Valid ResetPasswordDTO resetPasswordDto) {
-        try {
-            boolean resetResult = userBean.resetPassword(resetPasswordDto.getToken(), resetPasswordDto.getNewPassword());
-            if (resetResult) {
-                return Response.ok().entity("{\"message\":\"Senha redefinida com sucesso.\"}").build();
-            } else {
-                return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Falha na redefinição de senha. Token inválido ou expirado.\"}").build();
-            }
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"message\":\"Erro interno do servidor.\"}").build();
-        }
+    public void resetPassword(@Valid ResetPasswordDTO resetPasswordDto) throws InvalidPasswordRequestException {
+        userBean.resetPassword(resetPasswordDto.getToken(), resetPasswordDto.getNewPassword());
     }
-
-
 
     /**
      * This endpoint is responsible for user authentication. It accepts JSON-formatted requests containing
@@ -103,11 +57,8 @@ public class UserService {
     @POST
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response login(LoginDto user) {
-        String token = userBean.login(user);
-       if(token != null)return Response.status(200).entity("{\"token\":\"" + token + "\"}").build();
-       else return Response.status(401).entity("Login Failed").build();
-    }
+    @Produces(MediaType.APPLICATION_JSON)
+    public TokenDto login(LoginDto user) throws InvalidLoginException {return userBean.login(user);}
     /**
      * Retrieves the photo URL and the first name associated with the provided username.
      * If the username and password are not provided in the request headers, returns a status code 401 (Unauthorized)
@@ -119,19 +70,9 @@ public class UserService {
     @GET
     @Path("/photoandname")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getPhoto(@HeaderParam("Authorization") String authHeader) {
+    public InitialInformationDto getPhoto(@HeaderParam("Authorization") String authHeader) throws UserNotFoundException {
         String token = authHeader.substring(7);
-        List<String> userInformation = userBean.getUserBasicInfo(token);
-        System.out.println(userInformation.getFirst());
-        System.out.println(userInformation.get(3));
-        if (userInformation.getFirst() != null)return Response.status(200)
-                .entity("{\"photoUrl\":\"" + userInformation.getFirst()
-                        + "\", \"name\":\"" + userInformation.get(1) + "\", \"role\":\""
-                        + userInformation.get(2) +
-                        "\", \"username\":\""
-                        + userInformation.get(3) + "\"}")
-                .build();
-        return Response.status(404).entity("Not found").build();
+        return userBean.getUserBasicInfo(token);
     }
 
     /**
@@ -145,28 +86,9 @@ public class UserService {
     @GET
     @Path("info/{usernameProfile}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response userInfo(@PathParam("usernameProfile") String usernameProfile) {
-        UserEntity userEntity = userBean.getUserByUsername(usernameProfile);
-        UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
-        return Response.status(200).entity(userWithoutPassword).build();
-    }
-
-    /**
-     * Retrieves detailed information for a user based on a provided username. It checks if the request
-     * is authenticated and authorized to access the information. This endpoint is useful for obtaining
-     * user details without exposing sensitive information like passwords.
-     */
-
-    @GET
-    @Path("/userinfo/{username}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.GET_OTHER_USER_INFO)
-    public Response userInfoByusername(@PathParam("username") String username) {
-        if(username == null) return Response.status(400).entity("Invalid Data").build();
-        UserEntity userEntity = userBean.getUserByUsername(username);
-        UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
-        return Response.status(200).entity(userWithoutPassword).build();
+    public UserWithNoPassword userInfo(@PathParam("usernameProfile") String usernameProfile) throws UserNotFoundException {
+        return userBean.getUserWithNoPasswordByUsername(usernameProfile);
     }
 
     /**
@@ -178,10 +100,7 @@ public class UserService {
      @Path("")
      @Produces(MediaType.APPLICATION_JSON)
      @RequiresPermission(Function.GET_OTHER_USER_INFO)
-     public Response getAllUsers() {
-         System.out.println(userBean.getAllUsersInfo());
-         return Response.status(200).entity(userBean.getAllUsersInfo()).build();
-     }
+     public List<UserInfoCard> getAllUsers() {return (userBean.getAllUsersInfo());}
     /**
      * Allows an authenticated user to update their own data. It checks for valid authentication and
      * proper permissions before allowing the update. The method ensures that the user can only update
@@ -192,35 +111,22 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.EDIT_OWN_USER_INFO)
-    public Response editUserData(@Valid User updatedUser, @HeaderParam("Authorization") String authHeader) {
+    public void editUserData(@Valid UserUpdateDTO updatedUser, @HeaderParam("Authorization") String authHeader) throws UserNotFoundException {
         String token = authHeader.substring(7);
-        if (!userBean.checkIfUsernameExists(updatedUser.getUsername())) {
-            boolean updateResult = userBean.updateUser(token, updatedUser);
-            if (updateResult) return Response.status(200).entity("{\"message\":\"User Updated\"}").build();
-            else return Response.status(500).entity("An error occurred while updating user data").build();
-        }return Response.status(409).entity("Username or Email already Exists").build();
-    }
+        userBean.updateUser(token, updatedUser);}
 
     /**
      * Allows an administrator to edit another user's data, given a specific username. This endpoint
      * ensures that only users with the appropriate permissions can make changes to other user accounts.
      * It performs checks to ensure that the email and username remain unique and not already in use.
      */
-     @PATCH
+    @PATCH
     @Path("/otheruser")
     @Consumes(MediaType.APPLICATION_JSON)
-     @Produces(MediaType.APPLICATION_JSON)
-     @RequiresPermission(Function.EDIT_OTHER_USER_INFO)
-    public Response adminEditUserData(@Valid User updatedUser, @HeaderParam("userToChangeUsername") String username) {
-         if (userBean.checkIfUsernameExists(username)) {
-             if(!userBean.checkIfEmailExists(updatedUser.getEmail())) {
-                 boolean updateResult = userBean.updateUserByUsername(username, updatedUser);
-                 if (updateResult)
-                     return Response.status(200).entity("{\"message\":\"User data updated successfully\"}").build();
-                 else
-                     return Response.status(400).entity("An error occurred while updating user data").build();
-             } return Response.status(409).entity("Username or Email already Exists").build();
-         }return Response.status(409).entity("Username do not Exists").build();
+    @Produces(MediaType.APPLICATION_JSON)
+    @RequiresPermission(Function.EDIT_OTHER_USER_INFO)
+    public void adminEditUserData(@Valid UserUpdateDTO updatedUser, @HeaderParam("userToChangeUsername") String username) throws UserNotFoundException {
+        userBean.updateUserByUsername(username, updatedUser);
     }
 
     /**
@@ -231,14 +137,9 @@ public class UserService {
     @POST
     @Path("/password")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response editUserPassword(@Valid UserNewPassword updatedPassword, @HeaderParam("Authorization") String authHeader) {
+    public void editUserPassword(@Valid UserNewPassword updatedPassword, @HeaderParam("Authorization") String authHeader) throws InvalidPasswordRequestException {
         String token = authHeader.substring(7);
-        if (userBean.oldPasswordConfirmation(token, updatedPassword.getPassword(),
-                updatedPassword.getNewPassword())) {
-            boolean updateResult = userBean.updatePassWord(token, updatedPassword.getNewPassword());
-            if (updateResult) return Response.status(200).entity("{\"message\":\"User password updated successfully\"}").build();
-            else return Response.status(500).entity("An error occurred while updating user password").build();
-        }return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
+        userBean.updatePassWord(token, updatedPassword.getNewPassword(), updatedPassword.getPassword());
     }
 
     /**
@@ -252,26 +153,17 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.PERMANENTLY_USER_DELET)
-    public Response deleteUserPermanently(@HeaderParam("userToDeleteUsername")String username){
-        if(userBean.checkIfUsernameExists(username)) {
-            if(!username.equals("admin") && !username.equals("deletedTasks")) {
-                userBean.transferTasks(username);
-                userBean.transferCategories(username);
-                boolean successfullyDeleted = userBean.deleteUserPermanently(username);
-                if (successfullyDeleted)
-                    return Response.status(200).entity("{\"message\":\"This user permanently deleted\"}").build();
-                else return Response.status(400).entity("User not deleted").build();
-            }else return Response.status(400).entity("Admin can't be deleted.").build();
-        } else return Response.status(400).entity("User with this id not found").build();
+    public void deleteUserPermanently(@HeaderParam("userToDeleteUsername")String username) throws UserNotFoundException, CriticalDataDeletionAttemptException {
+        userBean.transferTasks(username);
+        userBean.transferCategories(username);
+        userBean.deleteMessages(username);
+        userBean.deleteNotifications(username);
+        userBean.deleteUserPermanently(username);
     }
-
     @GET
     @Path("/withtasks")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getUsersWithTasks() {
-        List<UserInfoCard> usersWithTasks = userBean.getUsersWithTasks();
-        return Response.status(200).entity(usersWithTasks).build();
-    }
+    public List<UserInfoCard> getUsersWithTasks() {return userBean.getUsersWithTasks();}
     /**
      * This endpoint makes logging out a user. Since this example does not
      * manage user sessions or authentication tokens explicitly, the endpoint simply returns
@@ -279,12 +171,13 @@ public class UserService {
      *  */
     @POST
     @Path("/logout")
-    public Response logout(@HeaderParam("Authorization") String authHeader) {
+    public void logout(@HeaderParam("Authorization") String authHeader) throws UserNotFoundException {
         String token = authHeader.substring(7);
-        if (token == null) {
-            return Response.status(422).entity("Missing token").build();
-        }
         userBean.logout(token);
-        return Response.status(200).entity("{\"message\":\"User logged out successfully\"}").build();
     }
+    @POST
+    @Path("/request-confirmation-email")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void requestConfirmationEmail(EmailDto email) throws InvalidRequestOnRegistConfirmationException {
+        userBean.requestNewConfirmationEmail(email);}
 }

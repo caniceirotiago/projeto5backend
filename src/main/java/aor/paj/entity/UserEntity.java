@@ -39,7 +39,7 @@ public class UserEntity implements Serializable {
     private String username;
     @Column(name="password", nullable=false, unique = false, updatable = true)
     private String password;
-    @Column(name="email", nullable=false, unique = true, updatable = true)
+    @Column(name="email", nullable=false, unique = true, updatable = false)
     private String email;
     @Column(name="firstname", nullable=false, unique = false, updatable = true)
     private String firstName;
@@ -47,7 +47,7 @@ public class UserEntity implements Serializable {
     private String lastName;
     @Column(name="phonenumber", nullable=false, unique = false, updatable = true)
     private String phoneNumber;
-    @Column(name="photourl", nullable=false, unique = false, updatable = true)
+    @Column(name="photourl", nullable=false, unique = false, updatable = true, length = 2048)
     private String photoURL;
     @Column(name="token", nullable=true, unique = true, updatable = true)
     private String token;
@@ -57,6 +57,8 @@ public class UserEntity implements Serializable {
     private boolean deleted;
     @Column(name="last_activity_timestamp", nullable=true, updatable = true)
     private Instant lastActivityTimestamp;
+    @Column(name="last_sent_email_timestamp", nullable=true, updatable = true)
+    private Instant lastSentEmailTimestamp;
     @Column(name = "is_confirmed")
     private boolean isConfirmed = false;
     @Column(name = "confirmation_token")
@@ -225,6 +227,14 @@ public class UserEntity implements Serializable {
 
     public void setLastActivityTimestamp(Instant lastActivityTimestamp) {
         this.lastActivityTimestamp = lastActivityTimestamp;
+    }
+
+    public Instant getLastSentEmailTimestamp() {
+        return lastSentEmailTimestamp;
+    }
+
+    public void setLastSentEmailTimestamp(Instant lastSentEmailTimestamp) {
+        this.lastSentEmailTimestamp = lastSentEmailTimestamp;
     }
 
     @Override

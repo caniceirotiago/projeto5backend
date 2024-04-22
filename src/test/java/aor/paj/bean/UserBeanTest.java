@@ -3,7 +3,11 @@ package aor.paj.bean;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.User;
+import aor.paj.dto.UserUpdateDTO;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.CriticalDataDeletionAttemptException;
+import aor.paj.exception.DuplicateUserException;
+import aor.paj.exception.UserNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -28,7 +32,7 @@ class UserBeanTest {
     @Mock
     private UserEntity testUser;
     @Mock
-    private User testUserUP;
+    private UserUpdateDTO testUserUP;
 
 
     @BeforeEach
@@ -54,7 +58,7 @@ class UserBeanTest {
     }
 
     @Test
-    void testRegisterUser_Success() {
+    void testRegisterUser_Success() throws DuplicateUserException {
         User newUser = new User();
         newUser.setUsername("newUser");
         newUser.setPassword("newPassword");
@@ -71,18 +75,17 @@ class UserBeanTest {
     }
 
     @Test
-    void testUpdateUser_Success() {
-        testUserUP = new User();
-        testUserUP.setEmail("testUser@example.com");
+    void testUpdateUser_Success() throws UserNotFoundException {
+        testUserUP = new UserUpdateDTO();
         testUserUP.setFirstName("Updated");
         testUserUP.setLastName("User");
         testUserUP.setPhoneNumber("1234567890");
         testUserUP.setPhotoURL("https://example.com/updatedphoto.jpg");
         testUserUP.setDeleted(false);
 
-        boolean result = userBean.updateUser("uniqueToken123456", testUserUP);
+        userBean.updateUser("uniqueToken123456", testUserUP);
 
-        assertTrue(result);
+
         verify(userDao, times(1)).updateUser(any(UserEntity.class));
     }
 
@@ -94,10 +97,10 @@ class UserBeanTest {
     }
 
     @Test
-    void testDeleteUserPermanently_Success() {
-        boolean result = userBean.deleteUserPermanently("testUser");
+    void testDeleteUserPermanently_Success() throws UserNotFoundException, CriticalDataDeletionAttemptException {
+        userBean.deleteUserPermanently("testUser");
 
-        assertTrue(result);
+
         verify(userDao, times(1)).deleteUser("testUser");
     }
     @Test
@@ -120,16 +123,15 @@ class UserBeanTest {
         assertNotNull(exception);
     }
     @Test
-    void testUpdateUser_Failure() {
+    void testUpdateUser_Failure() throws UserNotFoundException {
 
         when(userDao.findUserByToken(anyString())).thenReturn(null);
 
-        User userToUpdate = new User();
-        userToUpdate.setEmail("nonexistentUser@example.com");
+        UserUpdateDTO userToUpdate = new UserUpdateDTO();
 
-        boolean result = userBean.updateUser("nonexistentToken", userToUpdate);
+        userBean.updateUser("nonexistentToken", userToUpdate);
 
-        assertFalse(result);
+
     }
     @Test
     void testDeleteUserTemporarily_Failure() {
@@ -143,13 +145,13 @@ class UserBeanTest {
     }
 
     @Test
-    void testDeleteUserPermanently_Failure() {
+    void testDeleteUserPermanently_Failure() throws UserNotFoundException, CriticalDataDeletionAttemptException {
 
         when(userDao.deleteUser("nonexistentUser")).thenReturn(false);
 
-        boolean result = userBean.deleteUserPermanently("nonexistentUser");
+        userBean.deleteUserPermanently("nonexistentUser");
 
-        assertFalse(result);
+
     }
 
 

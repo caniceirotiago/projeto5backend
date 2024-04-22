@@ -21,6 +21,11 @@ public class MessageDao extends AbstractDao<MessageEntity> {
                 .setParameter("receiver", receiver);
         return query.getResultList();
     }
+    public List<MessageEntity> getMessages(UserEntity user) {
+        TypedQuery<MessageEntity> query = em.createNamedQuery("MessageEntity.getMessages", MessageEntity.class)
+                .setParameter("user", user);
+        return query.getResultList();
+    }
 
     public boolean markMessagesAsRead(List<Long> messagesIds) {
         System.out.println("Marking messages as read: " + messagesIds);
@@ -33,5 +38,11 @@ public class MessageDao extends AbstractDao<MessageEntity> {
         TypedQuery<MessageEntity> query = em.createQuery("SELECT m FROM MessageEntity m WHERE m.id IN :ids", MessageEntity.class)
                 .setParameter("ids", messagesIds);
         return query.getResultList();
+    }
+    public boolean deleteMessageById(Long messageId) {
+        em.createNamedQuery("MessageEntity.deleteMessageById")
+                .setParameter("id", messageId)
+                .executeUpdate();
+        return true;
     }
 }

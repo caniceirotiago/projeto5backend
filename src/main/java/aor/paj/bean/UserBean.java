@@ -1,30 +1,21 @@
 package aor.paj.bean;
 
-import aor.paj.dao.CategoryDao;
-import aor.paj.dao.TaskDao;
-import aor.paj.dao.UserDao;
-import aor.paj.dto.LoginDto;
-import aor.paj.dto.User;
-import aor.paj.dto.UserInfoCard;
-import aor.paj.dto.UserWithNoPassword;
-import aor.paj.entity.CategoryEntity;
-import aor.paj.entity.TaskEntity;
-import aor.paj.entity.UserEntity;
-import aor.paj.exception.DuplicateUserException;
+import aor.paj.dao.*;
+import aor.paj.dto.*;
+import aor.paj.entity.*;
+import aor.paj.exception.*;
 import aor.paj.service.EmailService;
 import aor.paj.service.status.userRoleManager;
 import jakarta.ejb.EJB;
-import jakarta.ejb.Singleton;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
+import jakarta.ws.rs.core.Response;
+import org.apache.logging.log4j.*;
 import util.HashUtil;
-
-
-
-
 import java.io.*;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -42,6 +33,7 @@ import java.util.UUID;
 
 @Stateless
 public class UserBean implements Serializable {
+    private static final Logger LOGGER = LogManager.getLogger(UserBean.class);
     @EJB
     UserDao userDao;
     @EJB
@@ -54,6 +46,10 @@ public class UserBean implements Serializable {
     EmailService emailService;
     @EJB
     StatisticsBean statistiscsBean;
+    @EJB
+    MessageDao messageDao;
+    @EJB
+    NotificationDao notificationDao;
 
     private UserEntity convertUserDtotoUserEntity(User user){
         UserEntity userEntity = new UserEntity();
@@ -70,20 +66,22 @@ public class UserBean implements Serializable {
             userEntity.setDeleted(false);
             userEntity.setConfirmed(false);
             userEntity.setConfirmationToken(user.getConfirmationToken());
-            System.out.println(userEntity);
-            System.out.println(user);
+
             return userEntity;
         }
         return null;
     }
-    public boolean register(User user){
+    public boolean register(User user) throws DuplicateUserException {
         if(user == null) return false;
         if (checkIfEmailExists(user.getEmail())) {
+            LOGGER.warn("Attempt to register with existing email at " + LocalDateTime.now() + ": " + user.getEmail());
             throw new DuplicateUserException("Email already exists");
-
-        } else if(checkIfUsernameExists(user.getUsername())){
+        }
+        if(checkIfUsernameExists(user.getUsername())){
+            LOGGER.warn("Attempt to register with existing username at " + LocalDateTime.now() + ": " + user.getUsername());
             throw new DuplicateUserException("Username already exists");
         }
+
         if (user.getRole() == null) {
             user.setRole(userRoleManager.DEVELOPER);
         }
@@ -95,7 +93,7 @@ public class UserBean implements Serializable {
             user.setConfirmationToken(confirmationToken);
             user.setConfirmed(false);
             emailService.sendConfirmationEmail(user.getEmail(), confirmationToken);
-            System.out.println(user);
+
             userDao.persist(convertUserDtotoUserEntity(user));
             statistiscsBean.broadcastUserStatisticsUpdate();
             return true;
@@ -104,18 +102,21 @@ public class UserBean implements Serializable {
         }
     }
 
-    public boolean confirmUser(String token) {
-        UserEntity user = userDao.findUserByConfirmationToken(token);
-        System.out.println(user);
-        if (user != null) {
-            user.setConfirmationToken(null);
-            user.setConfirmed(true);
-            user.setConfirmationTimestamp(Instant.now());
-            userDao.updateUser(user);
-            statistiscsBean.broadcastUserStatisticsUpdate();
-            return true;
+    public void confirmUser(String token) throws UserConfirmationException {
+        if(token == null) {
+            LOGGER.warn("Attempt to confirm user with null token at " + LocalDateTime.now());
+            throw new UserConfirmationException("Invalid token");
         }
-        return false;
+        UserEntity user = userDao.findUserByConfirmationToken(token);
+        if(user == null){
+            LOGGER.warn("Attempt to confirm user with invalid token at " + LocalDateTime.now() + ": " + token);
+            throw new UserConfirmationException("Invalid token");
+        }
+        user.setConfirmationToken(null);
+        user.setConfirmed(true);
+        user.setConfirmationTimestamp(Instant.now());
+        userDao.updateUser(user);
+        statistiscsBean.broadcastUserStatisticsUpdate();
     }
 
     public boolean checkIfUsernameExists(String username){
@@ -131,25 +132,32 @@ public class UserBean implements Serializable {
         return false;
     }
 
-    public String login(LoginDto user){
+    public TokenDto login(LoginDto user) throws InvalidLoginException {
         UserEntity userEntity = userDao.findUserByUsername(user.getUsername());
         if(userEntity !=null){
-            if(!userEntity.getDeleted() && userEntity.isConfirmed()){
-                String hashedPassword = HashUtil.toSHA256(user.getPassword());
-                if (userEntity != null){
-                    if (userEntity.getPassword().equals(hashedPassword)){
-                        String token = generateNewToken();
-                        userEntity.setToken(token);
-                        updateLastActivityTimestamp(userEntity);
-                        return token;
-                    }
-                }
+            if (userEntity.getDeleted()) {
+                LOGGER.warn("Attempt to login with deleted user at " + LocalDateTime.now() + ": " + user.getUsername());
+                throw new InvalidLoginException("User is deleted - contact the administrator");
             }
+            if(!userEntity.isConfirmed()){
+                LOGGER.warn("Attempt to login with unconfirmed user at " + LocalDateTime.now() + ": " + user.getUsername());
+                throw new InvalidLoginException("User is not confirmed - check your email for confirmation link or resend confirmation email");
+            }
+            String hashedPassword = HashUtil.toSHA256(user.getPassword());
+            if (!userEntity.getPassword().equals(hashedPassword)){
+                LOGGER.warn("Attempt to login with invalid password at " + LocalDateTime.now() + ": " + user.getUsername());
+                throw new InvalidLoginException("Invalid Credentials");
+            }
+            String token = generateNewToken();
+            userEntity.setToken(token);
+            updateLastActivityTimestamp(userEntity);
+            return new TokenDto(token);
         }
-        return null;
+        LOGGER.warn("Attempt to login with invalid username at " + LocalDateTime.now() + ": " + user.getUsername());
+        throw new InvalidLoginException("Invalid Credentials");
     }
-    public boolean tokenValidator(String token) {
-        System.out.println(token);
+    public boolean tokenValidator(String token) throws UserNotFoundException {
+
         UserEntity user = userDao.findUserByToken(token);
         if (user != null) {
             Instant now = Instant.now();
@@ -168,7 +176,7 @@ public class UserBean implements Serializable {
 
     private void updateLastActivityTimestamp(UserEntity user) {
         user.setLastActivityTimestamp(Instant.now());
-        userDao.updateUser(user); // Atualize o usuário no banco de dados.
+        userDao.updateUser(user);
     }
     public UserEntity getUserByToken(String token){
         UserEntity user=userDao.findUserByToken(token);
@@ -190,14 +198,23 @@ public class UserBean implements Serializable {
         UserEntity user = userDao.findUserByToken(token);
         return user.getRole();
     }
-    public List<String> getUserBasicInfo(String token){
+    public InitialInformationDto getUserBasicInfo(String token) throws UserNotFoundException {
         UserEntity user = userDao.findUserByToken(token);
-        List<String> userBasicInfo = new ArrayList<>();
-        userBasicInfo.add(user.getPhotoURL());
-        userBasicInfo.add(user.getFirstName());
-        userBasicInfo.add(user.getRole());
-        userBasicInfo.add(user.getUsername());
-        return userBasicInfo;
+        if(user == null) {
+            LOGGER.warn("Attempt to get user basic info with invalid token at " + LocalDateTime.now() + ": " + token);
+            throw new UserNotFoundException("Invalid Credentials");
+
+        }
+        return new InitialInformationDto(user.getPhotoURL(), user.getFirstName(), user.getRole(), user.getUsername());
+    }
+    public UserWithNoPassword getUserWithNoPasswordByUsername(String username) throws UserNotFoundException {
+        UserEntity userEntity = getUserByUsername(username);
+        if(userEntity == null) {
+            LOGGER.warn("Attempt to get user with invalid username at " + LocalDateTime.now() + ": " + username);
+            throw new UserNotFoundException("User not found");
+
+        }
+        return convertUserEntityToUserWithNoPassword(userEntity);
     }
     public void createDefaultUsersIfNotExistent(){
         UserEntity productOwner = userDao.findUserByUsername("admin");
@@ -233,7 +250,7 @@ public class UserBean implements Serializable {
 
     public UserWithNoPassword convertUserEntityToUserWithNoPassword(UserEntity userEntity){
       return new UserWithNoPassword(userEntity.getUsername(),
-              userEntity.getPhoneNumber(), // Corrigido: phoneNumber antes de email
+              userEntity.getPhoneNumber(),
               userEntity.getEmail(),
               userEntity.getFirstName(),
               userEntity.getLastName(),
@@ -241,60 +258,61 @@ public class UserBean implements Serializable {
               userEntity.getRole(),
               userEntity.getDeleted());
     }
-    public boolean updateUser(String token, User updatedUser) {
+    public void updateUser(String token, UserUpdateDTO updatedUser) throws UserNotFoundException {
         UserEntity user = getUserByToken(token);
-        if(user != null){
-            if(updatedUser.getPhoneNumber() != null) user.setPhoneNumber(updatedUser.getPhoneNumber());
-            if(updatedUser.getEmail() != null) user.setEmail(updatedUser.getEmail());
-            if(updatedUser.getFirstName() != null) user.setFirstName(updatedUser.getFirstName());
-            if(updatedUser.getLastName() != null) user.setLastName(updatedUser.getLastName());
-            if(updatedUser.getPhotoURL() != null) user.setPhotoURL(updatedUser.getPhotoURL());
-            user.setDeleted(updatedUser.isDeleted());
-            return userDao.updateUser(user);
+        if(user == null){
+            LOGGER.warn("Attempt to update user with invalid token at " + LocalDateTime.now() + ": " + token);
+            throw new UserNotFoundException("User not found");
         }
-      return false;
+        if(updatedUser.getPhoneNumber() != null) user.setPhoneNumber(updatedUser.getPhoneNumber());
+        if(updatedUser.getFirstName() != null) user.setFirstName(updatedUser.getFirstName());
+        if(updatedUser.getLastName() != null) user.setLastName(updatedUser.getLastName());
+        if(updatedUser.getPhotoURL() != null) user.setPhotoURL(updatedUser.getPhotoURL());
+        if(updatedUser.isDeleted() != null)user.setDeleted(updatedUser.isDeleted());
+        userDao.updateUser(user);
     }
-    public boolean updateUserByUsername(String userToChangeUsername, User updatedUser){
+    public void updateUserByUsername(String userToChangeUsername, UserUpdateDTO updatedUser) throws UserNotFoundException {
         UserEntity userToChange = getUserByUsername(userToChangeUsername);
-        if(userToChange != null){
-            if(updatedUser != null){
-                if(updatedUser.getPhoneNumber() != null)userToChange.setPhoneNumber(updatedUser.getPhoneNumber());
-                if(updatedUser.getEmail() != null) userToChange.setEmail(updatedUser.getEmail());
-                if(updatedUser.getFirstName() != null) userToChange.setFirstName(updatedUser.getFirstName());
-                if(updatedUser.getLastName() != null) userToChange.setLastName(updatedUser.getLastName());
-                if(updatedUser.getPhotoURL() != null) userToChange.setPhotoURL(updatedUser.getPhotoURL());
-                if(updatedUser.getRole() != null) userToChange.setRole(updatedUser.getRole());
-                userToChange.setDeleted(updatedUser.isDeleted());
-                if(updatedUser.isDeleted())userToChange.setToken(null);
-                return userDao.updateUser(userToChange);
-            }
+        if(userToChange == null){
+            LOGGER.warn("Attempt to update user with invalid username at " + LocalDateTime.now() + ": " + userToChangeUsername);
+            throw new UserNotFoundException("User not found");
         }
-        return false;
+        if(updatedUser.getPhoneNumber() != null)userToChange.setPhoneNumber(updatedUser.getPhoneNumber());
+        if(updatedUser.getFirstName() != null) userToChange.setFirstName(updatedUser.getFirstName());
+        if(updatedUser.getLastName() != null) userToChange.setLastName(updatedUser.getLastName());
+        if(updatedUser.getPhotoURL() != null) userToChange.setPhotoURL(updatedUser.getPhotoURL());
+        if(updatedUser.getRole() != null) userToChange.setRole(updatedUser.getRole());
+        userToChange.setDeleted(updatedUser.isDeleted());
+        if(updatedUser.isDeleted())userToChange.setToken(null);
+        userDao.updateUser(userToChange);
     }
 
     public boolean oldPasswordConfirmation(String token, String oldPassword, String newPassword){
         UserEntity user = getUserByToken(token);
         if(user != null){
             String hashedOldPassword = HashUtil.toSHA256(oldPassword);
-
-            if(user.getPassword().equals(hashedOldPassword) && !user.getPassword().equals(newPassword)){
+            String hashedNewPassword = HashUtil.toSHA256(newPassword);
+            if(user.getPassword().equals(hashedOldPassword) && !user.getPassword().equals(hashedNewPassword)){
                 return true;
             }
         }
         return false;
     }
 
-    public boolean updatePassWord(String token, String newPassword){
+    public void updatePassWord(String token, String newPassword, String oldPassword) throws InvalidPasswordRequestException {
         UserEntity user = getUserByToken(token);
-        if(user != null){
-            String hashedNewPassword = HashUtil.toSHA256(newPassword);
-
-            user.setPassword(hashedNewPassword);
-            return userDao.updateUser(user);
+        if(user == null){
+            LOGGER.warn("Attempt to update password with invalid token at " + LocalDateTime.now() + ": " + token);
+            throw new InvalidPasswordRequestException("Invalid token");
         }
-        return false;
+        if(!oldPasswordConfirmation(token, oldPassword, newPassword)){
+            LOGGER.warn("Attempt to update password with invalid old password or password should not be the same at " + LocalDateTime.now() + ": " + token);
+            throw new InvalidPasswordRequestException("Invalid old password or password should not be the same");
+        }
+        String hashedNewPassword = HashUtil.toSHA256(newPassword);
+        user.setPassword(hashedNewPassword);
+        userDao.updateUser(user);
     }
-
 
     public boolean deleteUserTemporarily(String username){
         UserEntity userEntity = userDao.findUserByUsername(username);
@@ -305,23 +323,7 @@ public class UserBean implements Serializable {
         }
         else return false;
     }
-    public void transferTasks(String username){
-        UserEntity admin=getUserByUsername("deletedUserTasks");
-        List<TaskEntity> tasks=taskDao.getTasksByFilter(false, username, null);
-        for(TaskEntity task:tasks){
-            task.setUser(admin);
-            taskDao.merge(task);
-        }
-    }
-    public void transferCategories(String username){
-        UserEntity userEntity=getUserByUsername(username);
-        UserEntity admin=getUserByUsername("deletedUserTasks");
-        ArrayList<CategoryEntity> categoryEntities=categoryDao.getCategoriesByUser(userEntity);
-        for(CategoryEntity category:categoryEntities){
-            category.setAuthor(admin);
-            categoryDao.merge(category);
-        }
-    }
+
     public UserInfoCard convertUserEntityToUserInfoCard(UserEntity userEntity){
         return new UserInfoCard(userEntity.getUsername(),
                 userEntity.getFirstName(),
@@ -339,47 +341,100 @@ public class UserBean implements Serializable {
         }
         return users;
     }
-    public boolean requestPasswordReset(String email) {
+    public void requestPasswordReset(String email) throws InvalidPasswordRequestException {
         UserEntity user = userDao.findUserByEmail(email);
         if (user == null) {
-            return false; // Usuário não encontrado
+            LOGGER.warn("Attempt to reset password with invalid email at " + LocalDateTime.now() + ": " + email);
+            throw new InvalidPasswordRequestException("Not found user with this email");
+        }
+        if(user.getResetPasswordTokenExpiry() != null && user.getResetPasswordTokenExpiry().isAfter(Instant.now())){
+            LOGGER.warn("Attempt to reset password with token not expired at " + LocalDateTime.now() + ": " + email);
+            throw new InvalidPasswordRequestException("You already requested a password reset, please check your email, wait" +
+                    " 30 minutes and try again, or contact the administrator");
         }
         String resetToken = UUID.randomUUID().toString();
         user.setResetPasswordToken(resetToken);
-        // Define um tempo de expiração para o token, por exemplo, 30 minutos a partir de agora
         user.setResetPasswordTokenExpiry(Instant.now().plus(30, ChronoUnit.MINUTES));
         userDao.updateUser(user);
-
-        // Enviar e-mail com o token de redefinição (implemente esta parte de acordo com seu serviço de e-mail)
         emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
-
-        return true;
     }
-    public boolean resetPassword(String token, String newPassword) {
+    public  void resetPassword(String token, String newPassword) throws InvalidPasswordRequestException {
         UserEntity user = userDao.findUserByResetPasswordToken(token);
-        if (user == null || user.getResetPasswordTokenExpiry().isBefore(Instant.now())) {
-            // Token não encontrado ou expirado
-            return false;
+        if (user == null) {
+           LOGGER.warn("Attempt to reset password with invalid token at " + LocalDateTime.now() + ": " + token);
+           throw new InvalidPasswordRequestException("Invalid token");
+        }
+        if(!user.getResetPasswordToken().equals(token)){
+            LOGGER.warn("Attempt to reset password with invalid token at " + LocalDateTime.now() + ": " + token);
+            throw new InvalidPasswordRequestException("Invalid token");
+        }
+        if(user.getResetPasswordTokenExpiry().isBefore(Instant.now())){
+            LOGGER.warn("Attempt to reset password with expired token at " + LocalDateTime.now() + ": " + token);
+            throw new InvalidPasswordRequestException("Token expired");
         }
         user.setPassword(HashUtil.toSHA256(newPassword));
         user.setResetPasswordToken(null);
         user.setResetPasswordTokenExpiry(null);
         userDao.updateUser(user);
-
-        return true;
     }
 
 
-    public boolean deleteUserPermanently(String username){
-        return userDao.deleteUser(username);
-    }
-    public void logout(String token){
-        UserEntity user = getUserByToken(token);
-        if(user != null){
-            user.setToken(null);
-            statistiscsBean.broadcastUserStatisticsUpdate();
-            userDao.updateUser(user);
+    public void deleteUserPermanently(String username) throws UserNotFoundException, CriticalDataDeletionAttemptException {
+        if(!checkIfUsernameExists(username)){
+            LOGGER.warn("Attempt to delete user with invalid username at " + LocalDateTime.now() + ": " + username);
+            throw new UserNotFoundException("User not found");
         }
+        if(username.equals("admin") || username.equals("deletedTasks")){
+            LOGGER.warn("Attempt to delete admin or deletedTasks user at " + LocalDateTime.now() + ": " + username);
+            throw new CriticalDataDeletionAttemptException("Critical data deletion attempt");
+        }
+       // transferTasks(username);
+       // transferCategories(username);
+      //  deleteMessages(username);
+       // deleteNotifications(username);
+        userDao.deleteUser(username);
+    }
+    public void transferTasks(String username){
+        UserEntity admin=getUserByUsername("deletedUserTasks");
+        List<TaskEntity> tasks=taskDao.getTasksByUser(username);
+        for(TaskEntity task:tasks){
+            task.setUser(admin);
+            taskDao.merge(task);
+        }
+    }
+    public void transferCategories(String username){
+        UserEntity userEntity=getUserByUsername(username);
+        UserEntity admin=getUserByUsername("deletedUserTasks");
+        ArrayList<CategoryEntity> categoryEntities=categoryDao.getCategoriesByUser(userEntity);
+        for(CategoryEntity category:categoryEntities){
+            category.setAuthor(admin);
+            categoryDao.merge(category);
+        }
+    }
+    public void deleteMessages(String username){
+        UserEntity userEntity=getUserByUsername(username);
+        List<MessageEntity> messages=messageDao.getMessages(userEntity);
+        for(MessageEntity message:messages){
+            messageDao.deleteMessageById(message.getId());
+        }
+    }
+    public void deleteNotifications(String username){
+        UserEntity userEntity=getUserByUsername(username);
+        List< NotificationEntity> notifications = notificationDao.getNotifications(userEntity);
+        for(NotificationEntity notification:notifications){
+            notificationDao.deleteNotificationById(notification.getId());
+        }
+    }
+
+    public void logout(String token) throws UserNotFoundException {
+        UserEntity user = getUserByToken(token);
+        if(user == null){
+            LOGGER.warn("Attempt to logout with invalid token at " + LocalDateTime.now() + ": " + token);
+            throw new UserNotFoundException("User not found");
+        }
+        user.setToken(null);
+        statistiscsBean.broadcastUserStatisticsUpdate();
+        userDao.updateUser(user);
     }
     public List<UserInfoCard> getUsersWithTasks(){
         List<UserEntity> userEntities = userDao.findUsersWithNonDeletedTasks();
@@ -390,6 +445,29 @@ public class UserBean implements Serializable {
             }
         }
         return users;
+    }
+    public void requestNewConfirmationEmail(EmailDto email) throws InvalidRequestOnRegistConfirmationException {
+        UserEntity user = userDao.findUserByEmail(email.getEmail());
+        if(user == null){
+            LOGGER.warn("Attempt to request new confirmation email at - User not foud " + LocalDateTime.now() + ": " + email.getEmail());
+            throw new InvalidRequestOnRegistConfirmationException("Not found user with this email");
+        }
+        if(user.isConfirmed()){
+            LOGGER.warn("Attempt to request new confirmation email at - User already confirmed" + LocalDateTime.now() + ": " + email.getEmail());
+            throw new InvalidRequestOnRegistConfirmationException("Not possible to request confirmation email please contact the administrator");
+        }
+        if(user.getLastSentEmailTimestamp() != null){
+            Instant now = Instant.now();
+            Instant lastSentEmail = user.getLastSentEmailTimestamp();
+            long timeDifference = ChronoUnit.MINUTES.between(lastSentEmail, now);
+            if(timeDifference < 1){
+                LOGGER.warn("Attempt to request new confirmation email at - Time difference less than 1 minute" +
+                        LocalDateTime.now() + ": " + email.getEmail());
+                throw new InvalidRequestOnRegistConfirmationException("You can't request a new confirmation email now, please wait 1 minute");
+            }
+        }
+        emailService.sendConfirmationEmail(user.getEmail(), user.getConfirmationToken());
+        user.setLastSentEmailTimestamp(Instant.now());
     }
     @Override
     public int hashCode() {

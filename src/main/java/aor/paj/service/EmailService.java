@@ -34,9 +34,16 @@ public class EmailService {
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress("antnestservice@gmail.com"));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
-            message.setSubject("Confirmação de Conta");
-            message.setText("Para confirmar sua conta, por favor clique no link abaixo:\n" + "http://localhost:3000/confirm?token=" + confirmationToken);
+            message.setSubject("Account Confirmation");
+            String htmlMessage = "<html><body>"
+                    + "<h1>Confirm Your Account</h1>"
+                    + "<p>Thank you for registering. Please click the link below to activate your account:</p>"
+                    + "<a href='http://localhost:3000/confirm?token=" + confirmationToken + "' style='padding: 8px 12px; " +
+                    "border: 1px solid #007bff; color: white; background-color: #007bff; text-decoration: none;'>Confirm Account</a>"
+                    + "</body></html>";
 
+
+            message.setContent(htmlMessage, "text/html; charset=utf-8");
             Transport.send(message);
         } catch (MessagingException e) {
             throw new RuntimeException(e);

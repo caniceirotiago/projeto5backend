@@ -2,6 +2,7 @@ package aor.paj.exception.mapper;
 
 import aor.paj.bean.UserBean;
 import aor.paj.dto.Error;
+import aor.paj.exception.CriticalDataDeletionAttemptException;
 import aor.paj.exception.DuplicateUserException;
 import aor.paj.exception.InvalidLoginException;
 import jakarta.ws.rs.core.MediaType;
@@ -15,13 +16,13 @@ import org.apache.logging.log4j.Logger;
 import java.time.LocalDateTime;
 
 @Provider
-public class DuplicateUserExceptionMapper implements ExceptionMapper<DuplicateUserException> {
-    private static final Logger LOGGER = LogManager.getLogger(DuplicateUserExceptionMapper.class);
+public class CriticalDataDeletionAttemptExceptionMapper implements ExceptionMapper<CriticalDataDeletionAttemptException> {
+    private static final Logger LOGGER = LogManager.getLogger(CriticalDataDeletionAttemptExceptionMapper.class);
 
     @Override
-    public Response toResponse(DuplicateUserException e) {
+    public Response toResponse(CriticalDataDeletionAttemptException e) {
         Error error = new Error(e.getMessage());
-        LOGGER.warn("Attempt to register with existing email or username " + LocalDateTime.now() + ": " + error.getErrorMessage());
+        LOGGER.warn("Attempt to delete critical data " + LocalDateTime.now() + ": " + error.getErrorMessage());
         return Response
                 .status(Response.Status.CONFLICT)
                 .entity(error)

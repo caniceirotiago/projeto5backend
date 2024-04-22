@@ -6,6 +6,8 @@ import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
 import jakarta.inject.Inject;
 
+import java.util.logging.Logger;
+
 @Singleton
 @Startup
 public class StartupBean {

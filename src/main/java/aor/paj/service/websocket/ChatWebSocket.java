@@ -2,6 +2,7 @@ package aor.paj.service.websocket;
 
 import aor.paj.bean.NotificationBean;
 import aor.paj.entity.MessageEntity;
+import aor.paj.exception.UserNotFoundException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -76,7 +77,7 @@ public class ChatWebSocket {
             JsonObject json = JsonParser.parseString(message).getAsJsonObject();
             String type = json.get("type").getAsString();
             if (type.equals("markAsRead")) {
-                markAsRead(session, json);
+                markAsRead(json);
             }
             else if (type.equals("sendMessage")) {
                 receiveSendMessage(session, json);
@@ -85,7 +86,7 @@ public class ChatWebSocket {
             System.err.println("Error processing message: " + e.getMessage());
         }
     }
-    public void markAsRead(Session session, JsonObject json) throws IOException {
+    public void markAsRead(JsonObject json) throws IOException {
         JsonElement dataElement = json.get("data");
         Type listType = new TypeToken<List<Long>>() {}.getType();
         List<Long> messageIds = gson.fromJson(dataElement, listType);
@@ -96,18 +97,20 @@ public class ChatWebSocket {
             WebSocketMessage response = new WebSocketMessage("markedAsReadMessages", messages);
             String jsonResponse = gson.toJson(response);
             Session receiverSession = userSessions.get(messages.getFirst().getReceiverUsername());
+            Session senderSession = userSessions.get(messages.getFirst().getSenderUsername());
             if (receiverSession != null && receiverSession.isOpen() &&
                     receiverSession.getUserProperties().get("receiverUsername").equals(messages.getFirst().getSenderUsername())) {
+                System.out.println("Receiver session open: sending to receiver the marked");
                 receiverSession.getBasicRemote().sendText(jsonResponse);
-                System.out.println("Receiver session open: " + receiverSession.isOpen());
             }
-            if (session != null && session.isOpen()) {
-                session.getBasicRemote().sendText(jsonResponse);
-                System.out.println("Sender session open: " + session.isOpen());
+            if (senderSession != null && senderSession.isOpen()) {
+                System.out.println("Sender session open: sending to sender the marked");
+                System.out.println(jsonResponse);
+                senderSession.getBasicRemote().sendText(jsonResponse);
             }
         }
     }
-    public void receiveSendMessage(Session session, JsonObject json) throws IOException {
+    public void receiveSendMessage(Session session, JsonObject json) throws IOException, UserNotFoundException {
         JsonObject data = json.getAsJsonObject("data");
         MessageDto msg = gson.fromJson(data, MessageDto.class);
         msg.setSentAt(LocalDateTime.now());

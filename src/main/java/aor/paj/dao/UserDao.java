@@ -20,9 +20,13 @@ public class UserDao extends AbstractDao<UserEntity> {
 	@PersistenceContext
 	private EntityManager entityManager;
 	public boolean checkIfEmailExists(String email) {
-		Query query = entityManager.createNamedQuery("User.checkIfEmailExists");
-		Long count = (Long) query.setParameter("email", email).getSingleResult();
-		return count > 0;
+		try {
+			Query query = entityManager.createNamedQuery("User.checkIfEmailExists");
+			Long count = (Long) query.setParameter("email", email).getSingleResult();
+			return count > 0;
+		} catch (NoResultException e) {
+			return false;
+		}
 	}
 
 	public boolean checkIfUsernameExists(String username) {
@@ -59,7 +63,6 @@ public class UserDao extends AbstractDao<UserEntity> {
 
 	public boolean updateUser(UserEntity user) {
 		try {
-			System.out.println("logout" + user);
 			em.merge(user);
 			return true;
 		} catch (Exception e) {

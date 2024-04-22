@@ -32,6 +32,8 @@ public class User {
     @NotNull
     @Pattern(regexp = "^\\+?\\d{9,15}$", message = "Invalid phone number")
     private String phoneNumber;
+    @NotNull
+    @Size(min = 2, max = 2048, message = "Last name must be between 2 and 2048 characters")
     @NotBlank
     private String photoURL;
     @NotBlank
@@ -57,9 +59,6 @@ public class User {
         this.role=role;
         this.deleted = deleted;
     }
-
-    // getters e setters como xmlElement
-
 
     public String getConfirmationToken() {
         return confirmationToken;

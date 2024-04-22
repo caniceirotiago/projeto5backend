@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table (name="task")
+@NamedQuery(name="Task.findAllTasksByUsername", query="SELECT t FROM TaskEntity t " +
+        "WHERE t.user.username=:username")
 @NamedQuery(name="Task.findTasksByStatus", query="SELECT t FROM TaskEntity t " +
         "WHERE t.status=:status")
 @NamedQuery(name="Task.findNOfTasksByStatusAndUser", query="SELECT COUNT(t) FROM TaskEntity t " +
