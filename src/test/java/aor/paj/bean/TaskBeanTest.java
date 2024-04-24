@@ -7,6 +7,8 @@ import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.EntityValidationException;
+import aor.paj.exception.UserConfirmationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -74,14 +76,13 @@ class TaskBeanTest {
     }
 
     @Test
-    void testAddTask_Success() {
+    void testAddTask_Success() throws EntityValidationException, UserConfirmationException {
         TaskDto newTaskDto = new TaskDto();
         newTaskDto.setTitle("New Task");
         newTaskDto.setDescription("Description of the new task.");
         newTaskDto.setCategory_type(testCategory.getType());
         newTaskDto.setUsername_author(testUser.getUsername());
-        boolean result = taskBean.addTask("validToken", "Work", newTaskDto);
-        assertTrue(result, "Task should be added successfully");
+        taskBean.addTask("validToken",  newTaskDto);
         verify(taskDao, times(1)).persist(any(TaskEntity.class));
     }
 
@@ -93,7 +94,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testEditTask_Success() {
+    void testEditTask_Success() throws EntityValidationException {
         TaskDto taskDtoToUpdate = new TaskDto();
         taskDtoToUpdate.setTitle("Updated Task Title");
         taskDtoToUpdate.setDescription("Updated description.");
@@ -108,9 +109,8 @@ class TaskBeanTest {
 
         when(taskDao.findTaskById(1)).thenReturn(existingTask);
 
-        boolean result = taskBean.editTask(1, taskDtoToUpdate);
+        taskBean.editTask(1, taskDtoToUpdate);
 
-        assertTrue(result, "Task should be updated successfully");
 
         verify(taskDao, times(1)).merge(existingTask);
 
@@ -128,7 +128,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testDeleteTaskPermanently_Success() {
+    void testDeleteTaskPermanently_Success() throws EntityValidationException {
         int taskIdToDelete = 1;
 
         taskBean.deleteTaskPermanently(taskIdToDelete);
@@ -150,7 +150,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testEditTask_Failure_TaskNotFound() {
+    void testEditTask_Failure_TaskNotFound() throws EntityValidationException {
         TaskDto taskDtoToUpdate = new TaskDto();
         taskDtoToUpdate.setTitle("Updated Task Title");
         taskDtoToUpdate.setDescription("Updated description.");
@@ -159,9 +159,8 @@ class TaskBeanTest {
 
         when(taskDao.findTaskById(anyInt())).thenReturn(null);
 
-        boolean result = taskBean.editTask(999, taskDtoToUpdate); // Um ID que supostamente não existe
+        taskBean.editTask(999, taskDtoToUpdate); // Um ID que supostamente não existe
 
-        assertFalse(result, "Task should not be updated because it does not exist");
         verify(taskDao, never()).merge(any(TaskEntity.class));
     }
 
@@ -176,7 +175,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testDeleteTaskPermanently_Failure_TaskNotFound() {
+    void testDeleteTaskPermanently_Failure_TaskNotFound() throws EntityValidationException {
         int taskIdToDelete = 999;
         when(taskDao.findTaskById(taskIdToDelete)).thenReturn(null); // Simula tarefa não encontrada antes da tentativa de exclusão
 

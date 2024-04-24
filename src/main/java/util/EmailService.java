@@ -1,4 +1,4 @@
-package aor.paj.service;
+package util;
 
 import jakarta.ejb.Stateless;
 import jakarta.mail.Message;

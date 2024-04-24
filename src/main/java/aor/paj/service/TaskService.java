@@ -1,34 +1,22 @@
 
 package aor.paj.service;
-import aor.paj.bean.PermissionBean;
 import aor.paj.bean.TaskBean;
-import aor.paj.bean.UserBean;
 import aor.paj.dto.TaskDto;
-import aor.paj.entity.TaskEntity;
+import aor.paj.exception.EntityValidationException;
+import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.Function;
 import filters.RequiresPermission;
+import filters.RequiresPermissionByTaskId;
 import jakarta.ejb.EJB;
-import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
-import java.util.ArrayList;
 import java.util.List;
-
 
 @Path("/tasks")
 public class TaskService {
     @EJB
     TaskBean taskBean;
-    @EJB
-    UserBean userBean;
-    @EJB
-    PermissionBean permissionBean;
-
-
-
     /**
      * This endpoint is responsible for creating a new task in the system. It accepts JSON-formatted requests
      * containing task data and processes the request accordingly.
@@ -42,14 +30,10 @@ public class TaskService {
     @POST
     @Path("")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createTask(@Valid @HeaderParam("Authorization") String authHeader, TaskDto a) {
-        String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        String categoryName = a.getCategory_type();
-        if(taskBean.addTask(token,categoryName,a)){
-            return Response.status(200).entity("{\"message\":\"Task Created\"}").build();
-        }return Response.status(400).entity("Invalid task type").build();
+    public void createTask(@Valid @HeaderParam("Authorization") String authHeader, TaskDto task) throws EntityValidationException, UserConfirmationException {
+        String token = authHeader.substring(7);
+        taskBean.addTask(token,task);
     }
-
     /**
      * This endpoint is responsible for editing an existing task in the system. It accepts JSON-formatted requests
      * containing task data and processes the request accordingly.
@@ -65,16 +49,9 @@ public class TaskService {
     @POST
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response editTask(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) {
-        String token = authorizationHeader.substring("Bearer ".length());
-
-        if (taskBean.taskIdValidator(id)) {
-            if(permissionBean.getPermissionByTaskID(token, id) || taskDto.getStatus() != null) {
-                if (taskBean.editTask(id, taskDto)) {
-                    return Response.status(200).entity("Task updated successfuly.").build();
-                } else return Response.status(400).entity("Wrong data.").build();
-            } else return Response.status(403).entity("Access Denied").build();
-        } else return Response.status(404).entity("Task with this id not found").build();
+    @RequiresPermissionByTaskId
+    public void editTask(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) throws EntityValidationException {
+        taskBean.editTask(id, taskDto);
     }
 
     /**
@@ -88,10 +65,8 @@ public class TaskService {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getTaskById(@PathParam("id") int id) {
-        if(taskBean.taskIdValidator(id)){
-            return Response.status(200).entity(taskBean.convertTaskEntitytoTaskDto(taskBean.getTaskById(id))).build();
-        }else return Response.status(404).entity("Task with this id not found").build();
+    public TaskDto getTaskById(@PathParam("id") int id) throws EntityValidationException {
+        return taskBean.getTaskDtoById(id);
     }
 
     /**
@@ -105,11 +80,10 @@ public class TaskService {
     @GET
     @Path("")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllBYFilter(@QueryParam("deleted") boolean deleted,
-                                   @QueryParam("username") String username,
-                                   @QueryParam("category") String category_type) {
-        List<TaskDto> tasksDtos = taskBean.getAllTasksByFilter(deleted, username, category_type);
-        return Response.status(200).entity(tasksDtos).build();
+    public List<TaskDto> getAllBYFilter(@QueryParam("deleted") boolean deleted,
+                                        @QueryParam("username") String username,
+                                        @QueryParam("category") String category_type) {
+        return taskBean.getAllTasksByFilter(deleted, username, category_type);
     }
 
     /**
@@ -128,11 +102,8 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY)
-    public Response deleteAllTasksTemporarily(@PathParam("username")String username){
-        if(userBean.getUserByUsername(username)!=null){
-            taskBean.deleteAllTasksByUser(username);
-            return Response.status(200).entity("{\"message\":\"Tasks sucecessfully deleted\"}").build();
-        } else return Response.status(404).entity("User with this username not found").build();
+    public void deleteAllTasksTemporarily(@PathParam("username")String username) throws UserConfirmationException {
+        taskBean.deleteAllTasksByUser(username);
     }
 
     /**
@@ -150,11 +121,7 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.DELETE_TASK_PERMANENTLY)
-    public Response deleteTaskPermanently(@PathParam("id")int id){
-        if(taskBean.taskIdValidator(id)) {
-            boolean deleted = taskBean.deleteTaskPermanently(id);
-            if (deleted) return Response.status(200).entity("This task permanently deleted ").build();
-            else return Response.status(400).entity("This task is already deleted").build();
-        } else return Response.status(400).entity("Task with this id not found").build();
+    public void deleteTaskPermanently(@PathParam("id")int id) throws EntityValidationException {
+        taskBean.deleteTaskPermanently(id);
     }
 }

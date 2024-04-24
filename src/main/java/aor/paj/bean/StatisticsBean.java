@@ -3,18 +3,20 @@ package aor.paj.bean;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.CategoryDto;
-import aor.paj.dto.Statistics.CategoryStatisticsDTO;
-import aor.paj.dto.Statistics.IndividualUserStatisticsDto;
-import aor.paj.dto.Statistics.TasksStatisticsDTO;
-import aor.paj.dto.Statistics.UsersStatisticsDTO;
+import aor.paj.dto.Statistics.*;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
+import aor.paj.entity.UserEntity;
+import aor.paj.exception.EntityValidationException;
+import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.taskStatusManager;
 import aor.paj.service.websocket.DashboardWebSocket;
 import aor.paj.service.websocket.WebSocketMessage;
 import com.google.gson.Gson;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Stateless
 public class StatisticsBean {
+    private static final Logger LOGGER = LogManager.getLogger(StatisticsBean.class);
     @EJB
     UserDao userDao;
     @EJB
@@ -87,6 +90,12 @@ public class StatisticsBean {
 
         return new HashMap<>(tasksByWeek);
     }
+    public DashboardDTO createDashboardDto() {
+        UsersStatisticsDTO usersDTO = createUserStatisticsDTO();
+        TasksStatisticsDTO tasksDTO = createTasksStatisticsDTO();
+        CategoryStatisticsDTO categoryDTO = createCategoryStatisticsDTO();
+        return new DashboardDTO(usersDTO, tasksDTO, categoryDTO);
+    }
 
 
     public UsersStatisticsDTO createUserStatisticsDTO() {
@@ -110,7 +119,6 @@ public class StatisticsBean {
     public CategoryStatisticsDTO createCategoryStatisticsDTO() {
         return new CategoryStatisticsDTO(getOrderCategoriesByNumberOfTasks());
     }
-    // Método para broadcasting de estatísticas de usuários
     public void broadcastUserStatisticsUpdate() {
         UsersStatisticsDTO usersStats = createUserStatisticsDTO();
         String jsonUsersStats = gson.toJson(new WebSocketMessage("userStatistics", usersStats));
@@ -118,20 +126,23 @@ public class StatisticsBean {
         System.out.println("Broadcasting user statistics");
     }
 
-    // Método para broadcasting de estatísticas de tarefas
     public void broadcastTaskStatisticsUpdate() {
         TasksStatisticsDTO tasksStats = createTasksStatisticsDTO();
         String jsonTasksStats = gson.toJson(new WebSocketMessage("taskStatistics", tasksStats));
         DashboardWebSocket.broadcast(jsonTasksStats);
     }
 
-    // Método para broadcasting de estatísticas de categorias
     public void broadcastCategoryStatisticsUpdate() {
         CategoryStatisticsDTO categoriesStats = createCategoryStatisticsDTO();
         String jsonCategoriesStats = gson.toJson(new WebSocketMessage("categoryStatistics", categoriesStats));
         DashboardWebSocket.broadcast(jsonCategoriesStats);
     }
-    public IndividualUserStatisticsDto createIndividualUserStatisticsDTO(String username) {
+    public IndividualUserStatisticsDto createIndividualUserStatisticsDTO(String username) throws UserConfirmationException {
+        UserEntity user = userDao.findUserByUsername(username);
+        if (user == null) {
+            LOGGER.warn("Invalid username: " + username + " for individual user statistics");
+            throw new UserConfirmationException("Invalid username");
+        }
         IndividualUserStatisticsDto dto = new IndividualUserStatisticsDto();
         dto.setDoingTasks(taskDao.getNTasksByStatusAndUser(taskStatusManager.DOING, username));
         dto.setDoneTasks(taskDao.getNTasksByStatusAndUser(taskStatusManager.DONE, username));

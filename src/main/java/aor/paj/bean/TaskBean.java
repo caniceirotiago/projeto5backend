@@ -7,13 +7,20 @@ import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.EntityValidationException;
+import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.websocket.TaskWebSocket;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +34,9 @@ import java.util.List;
  */
 
 @Stateless
-public class TaskBean{
+public class TaskBean implements Serializable {
+    private static final Logger LOGGER = LogManager.getLogger(TaskBean.class);
+
     @EJB
     TaskDao taskDao;
     @EJB
@@ -63,43 +72,47 @@ public class TaskBean{
         taskDto.setDeleted(taskEntity.isDeleted());
         return taskDto;
     }
-    public boolean addTask(String token,String type,TaskDto taskDto) {
-        if(token==null || type==null || taskDto==null) return false;
+    public void addTask(String token, TaskDto taskDto) throws EntityValidationException, UserConfirmationException {
+        String categoryName = taskDto.getCategory_type();
+        CategoryEntity categoryEntity = categoryDao.findCategoryByType(categoryName);
         UserEntity userEntity=userBean.getUserByToken(token);
-        TaskEntity taskEntity=convertTaskDtotoTaskEntity(taskDto);
-        CategoryEntity categoryEntity=categoryDao.findCategoryByType(type);
-        if(categoryEntity!=null) {
-            taskEntity.setUser(userEntity);
-            taskEntity.setCategory(categoryEntity);
-            taskEntity.setStatus(100);
-            taskEntity.setDeleted(false);
-            if(taskDto.getStartDate()!=null) {
-                taskEntity.setStartDate(taskDto.getStartDate());
-            }
-            if(taskDto.getEndDate()!=null) {
-                taskEntity.setEndDate(taskDto.getEndDate());
-            }
-            taskDao.persist(taskEntity);
-            statisticsBean.broadcastTaskStatisticsUpdate();
-            statisticsBean.broadcastCategoryStatisticsUpdate();
-            statisticsBean.broadcastUserStatisticsUpdate();
-            TaskDto addedDto = convertTaskEntitytoTaskDto(taskEntity);
-            TaskWebSocket.broadcast("createTask", addedDto);
-            return true;
+        if (categoryEntity == null) {
+            LOGGER.warn("Invalid category type: " + categoryName);
+            throw new EntityValidationException("Invalid category type");
         }
-        else return false;
+        if(userEntity == null){
+            LOGGER.warn("Invalid token: " + token + " for task creation");
+            throw new UserConfirmationException("Invalid token");
+        }
+        TaskEntity taskEntity=convertTaskDtotoTaskEntity(taskDto);
+        taskEntity.setUser(userEntity);
+        taskEntity.setCategory(categoryEntity);
+        taskEntity.setStatus(100);
+        taskEntity.setDeleted(false);
+        if(taskDto.getStartDate()!=null) {
+            taskEntity.setStartDate(taskDto.getStartDate());
+        }
+        if(taskDto.getEndDate()!=null) {
+            taskEntity.setEndDate(taskDto.getEndDate());
+        }
+        taskDao.persist(taskEntity);
+        statisticsBean.broadcastTaskStatisticsUpdate();
+        statisticsBean.broadcastCategoryStatisticsUpdate();
+        statisticsBean.broadcastUserStatisticsUpdate();
+        TaskDto addedDto = convertTaskEntitytoTaskDto(taskEntity);
+        TaskWebSocket.broadcast("createTask", addedDto);
     }
     public TaskEntity getTaskById(int task_id){
         return taskDao.findTaskById(task_id);
     }
 
-    public boolean taskIdValidator(int task_id){
-        if(taskDao.findTaskById(task_id)==null) return false;
-        else return true;
-    }
-    public boolean editTask(int id, TaskDto taskDto){
-        if(taskDto == null || id < 0) return false; TaskEntity taskEntity=taskDao.findTaskById(id);
-        if(taskEntity==null) return false;
+    public void editTask(int id, TaskDto taskDto) throws EntityValidationException {
+        TaskEntity taskEntity=taskDao.findTaskById(id);
+        boolean isPreviousTaskDeleteded = taskEntity.isDeleted();
+        if(taskEntity==null){
+            LOGGER.warn("Invalid Task id");
+            throw new EntityValidationException("Invalid Task id ");
+        }
         if(taskDto.getCategory_type() != null)taskEntity.setCategory(categoryDao.findCategoryByType(taskDto.getCategory_type()));
         if(taskDto.getTitle() != null)taskEntity.setTitle(taskDto.getTitle());
         if(taskDto.getDescription() != null)taskEntity.setDescription(taskDto.getDescription());
@@ -120,20 +133,35 @@ public class TaskBean{
         statisticsBean.broadcastCategoryStatisticsUpdate();
         TaskDto updatedDto = convertTaskEntitytoTaskDto(taskEntity);
         TaskWebSocket.broadcast("updatedTask", updatedDto);
-        return true;
+        if(isPreviousTaskDeleteded && !taskEntity.isDeleted()){
+            TaskWebSocket.broadcast("recycleTask", updatedDto);
+        }
+    }
+    public TaskDto getTaskDtoById(int id) throws EntityValidationException {
+        TaskEntity taskEntity=taskDao.findTaskById(id);
+        if(taskEntity==null){
+            LOGGER.warn("Invalid Task id");
+            throw new EntityValidationException("Invalid Task id ");
+        }
+        return convertTaskEntitytoTaskDto(taskEntity);
     }
     public TaskEntity updateTimeStamps(TaskEntity taskEntity, int newStatus){
         if(newStatus == 200) taskEntity.setDoingTimestamp(LocalDateTime.now());
         if(newStatus == 300) taskEntity.setDoneTimestamp(LocalDateTime.now());
         return taskEntity;
     }
-    public boolean deleteTaskPermanently(int id){
-        if(taskDao.findTaskById(id)==null) return false;
+    public void deleteTaskPermanently(int id) throws EntityValidationException {
+        TaskEntity taskEntity=taskDao.findTaskById(id);
+        if(taskEntity==null) {
+            LOGGER.warn("Invalid Task id");
+            throw new EntityValidationException("Invalid Task id ");
+        }
         taskDao.deleteTask(id);
         statisticsBean.broadcastTaskStatisticsUpdate();
         statisticsBean.broadcastCategoryStatisticsUpdate();
         statisticsBean.broadcastUserStatisticsUpdate();
-        return true;
+        TaskDto deletedDto = convertTaskEntitytoTaskDto(taskEntity);
+        TaskWebSocket.broadcast("deletedTaskPermanentely", deletedDto);
     }
     public boolean deleteTemporarily(int id){
         TaskEntity taskEntity=taskDao.findTaskById(id);
@@ -143,7 +171,6 @@ public class TaskBean{
             taskDao.merge(taskEntity);
             TaskDto deletedDto = convertTaskEntitytoTaskDto(taskEntity);
             TaskWebSocket.broadcast("deleteTask", deletedDto);
-
             return true;
         }
         else return false;
@@ -156,8 +183,18 @@ public class TaskBean{
         }
         return tasksDtos;
     }
-    public void deleteAllTasksByUser(String username){
+    public void deleteAllTasksByUser(String username) throws UserConfirmationException {
+        if(userBean.getUserByUsername(username)==null){
+            LOGGER.warn("Invalid username: " + username + " for task deletion");
+            throw new UserConfirmationException("Invalid username");
+        }
+        List<TaskEntity> tasks = taskDao.getTasksByFilter(false, username, null);
         taskDao.deleteAllTasksByUser(username);
+        for (TaskEntity task : tasks) {
+            TaskDto deletedDto = convertTaskEntitytoTaskDto(task);
+            deletedDto.setDeleted(true);
+            TaskWebSocket.broadcast("updatedTask", deletedDto);
+        }
         statisticsBean.broadcastTaskStatisticsUpdate();
         statisticsBean.broadcastCategoryStatisticsUpdate();
         statisticsBean.broadcastUserStatisticsUpdate();

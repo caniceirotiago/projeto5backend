@@ -2,13 +2,15 @@ package aor.paj.bean;
 
 import aor.paj.dao.CategoryDao;
 import aor.paj.dto.CategoryDto;
-import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
-import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.CriticalDataDeletionAttemptException;
+import aor.paj.exception.EntityValidationException;
+import aor.paj.exception.UserConfirmationException;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
-import jakarta.inject.Inject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.List;
 
 @Stateless
 public class CategoryBean implements Serializable {
+    private static final Logger LOGGER = LogManager.getLogger(CategoryBean.class);
 
     @EJB
     CategoryDao categoryDao;
@@ -43,17 +46,23 @@ public class CategoryBean implements Serializable {
         }
     }
 
-    public CategoryDto addCategory(UserEntity user, String type){
-        if(categoryDao.findCategoryByType(type)==null) {
-            CategoryEntity categoryEntity = new CategoryEntity();
-            categoryEntity.setType(type);
-            categoryEntity.setAuthor(user);
-            categoryDao.persist(categoryEntity);
-            statisticsBean.broadcastCategoryStatisticsUpdate();
-            CategoryDto categoryDto=convertCategoryEntitytoCategoryDto(categoryEntity);
-            return categoryDto;
+    public void addCategory(String type, String token) throws UserConfirmationException, EntityValidationException {
+        UserEntity user = userBean.getUserByToken(token);
+        CategoryEntity categoryEntity = categoryDao.findCategoryByType(type);
+        if(user == null){
+            LOGGER.warn("Invalid token");
+            throw new UserConfirmationException("Invalid token");
         }
-        else return null;
+        if(categoryEntity != null){
+            LOGGER.info("Category already exists");
+            throw new EntityValidationException("Category already exists");
+        }
+        CategoryEntity newCategoryEntity = new CategoryEntity();
+        newCategoryEntity.setType(type);
+        newCategoryEntity.setAuthor(user);
+        categoryDao.persist(newCategoryEntity);
+        statisticsBean.broadcastCategoryStatisticsUpdate();
+        convertCategoryEntitytoCategoryDto(newCategoryEntity);
     }
 
     public ArrayList<CategoryEntity> getAllCategories(){
@@ -61,27 +70,34 @@ public class CategoryBean implements Serializable {
     }
 
 
-    public boolean editCategory(String newType, String oldType){
-        if(categoryDao.findCategoryByType(newType)==null) {
-            CategoryEntity categoryEntity = categoryDao.findCategoryByType(oldType);
-            categoryEntity.setType(newType);
-            categoryDao.merge(categoryEntity);
-            statisticsBean.broadcastCategoryStatisticsUpdate();
-            return true;
+    public void editCategory(String newType, String oldType) throws EntityValidationException {
+        CategoryEntity categoryEntity = categoryDao.findCategoryByType(oldType);
+        CategoryEntity newCategoryEntity = categoryDao.findCategoryByType(newType);
+        if(categoryEntity == null){
+            LOGGER.warn("Invalid category type: " + oldType);
+            throw new EntityValidationException("Invalid category type");
         }
-        return false;
+        if(newCategoryEntity != null) {
+            LOGGER.warn("Category already exists");
+            throw new EntityValidationException("Category already exists");
+        }
+        categoryEntity.setType(newType);
+        categoryDao.merge(categoryEntity);
+        statisticsBean.broadcastCategoryStatisticsUpdate();
     }
 
-    public boolean deleteCategory(String category_type){
-        if(categoryDao.findCategoryByType(category_type)!=null){
-            categoryDao.deleteCategory(category_type);
-            statisticsBean.broadcastCategoryStatisticsUpdate();
-            return true;
-        } else return false;
-    }
-    public boolean categoryTypeValidator(String type){
-        if(categoryDao.findCategoryByType(type)!=null) return true;
-        else return false;
+    public void deleteCategory(String category_type) throws CriticalDataDeletionAttemptException, EntityValidationException {
+        CategoryEntity categoryEntity = categoryDao.findCategoryByType(category_type);
+        if(categoryEntity == null){
+            LOGGER.warn("Invalid category type: " + category_type);
+            throw new EntityValidationException("Invalid category type");
+        }
+        if(hasThisCategoryTasks(category_type)){
+            LOGGER.warn("This category has tasks");
+            throw new CriticalDataDeletionAttemptException("This category has tasks");
+        }
+        categoryDao.deleteCategory(category_type);
+        statisticsBean.broadcastCategoryStatisticsUpdate();
     }
 
     public boolean hasThisCategoryTasks(String type){
@@ -107,5 +123,13 @@ public class CategoryBean implements Serializable {
             categoryDtos.add(convertCategoryEntitytoCategoryDto(category));
         }
         return categoryDtos;
+    }
+    public List<CategoryDto> getAllCategoriesDtos(){
+        ArrayList<CategoryEntity> categoriesEntities = getAllCategories();
+        ArrayList<CategoryDto> categoriesDtos = new ArrayList<>();
+        for (CategoryEntity category : categoriesEntities) {
+            categoriesDtos.add(convertCategoryEntitytoCategoryDto(category));
+        }
+        return categoriesDtos;
     }
 }

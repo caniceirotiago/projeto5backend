@@ -4,12 +4,11 @@ import aor.paj.dao.*;
 import aor.paj.dto.*;
 import aor.paj.entity.*;
 import aor.paj.exception.*;
-import aor.paj.service.EmailService;
+import util.EmailService;
 import aor.paj.service.status.userRoleManager;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
-import jakarta.ws.rs.core.Response;
 import org.apache.logging.log4j.*;
 import util.HashUtil;
 import java.io.*;
@@ -88,7 +87,6 @@ public class UserBean implements Serializable {
         String hashedPassword = HashUtil.toSHA256(user.getPassword());
         user.setPassword(hashedPassword);
         try {
-
             String confirmationToken = UUID.randomUUID().toString();
             user.setConfirmationToken(confirmationToken);
             user.setConfirmed(false);
@@ -98,6 +96,7 @@ public class UserBean implements Serializable {
             statistiscsBean.broadcastUserStatisticsUpdate();
             return true;
         } catch (NoResultException e ) {
+            LOGGER.error("Error while persisting user at " + LocalDateTime.now() + ": " + e.getMessage());
             return false;
         }
     }

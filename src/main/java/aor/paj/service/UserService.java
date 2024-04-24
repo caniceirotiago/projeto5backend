@@ -179,5 +179,6 @@ public class UserService {
     @Path("/request-confirmation-email")
     @Consumes(MediaType.APPLICATION_JSON)
     public void requestConfirmationEmail(EmailDto email) throws InvalidRequestOnRegistConfirmationException {
-        userBean.requestNewConfirmationEmail(email);}
+        userBean.requestNewConfirmationEmail(email);
+    }
 }

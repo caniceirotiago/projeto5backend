@@ -1,16 +1,15 @@
 package aor.paj.bean;
 
-import aor.paj.dao.MessageDao;
 import aor.paj.dao.NotificationDao;
-import aor.paj.dto.MessageDto;
 import aor.paj.dto.NotificationDto;
-import aor.paj.dto.User;
-import aor.paj.entity.MessageEntity;
 import aor.paj.entity.NotificationEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.UserNotFoundException;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import aor.paj.service.websocket.NotificationsWebSocket;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,6 +18,7 @@ import java.util.List;
 
 @Stateless
 public class NotificationBean {
+    private static final Logger LOGGER = LogManager.getLogger(NotificationBean.class);
     @EJB
     private UserBean userBean;
     @EJB
@@ -33,10 +33,11 @@ public class NotificationBean {
 
         return notificationDtos;
     }
-    public HashMap<String, List<NotificationDto>> getAgrupatedNotifications(String token) {
+    public HashMap<String, List<NotificationDto>> getAgrupatedNotifications(String token) throws UserNotFoundException {
         UserEntity user = userBean.getUserByToken(token);
-        if (user == null) {
-            return null;
+        if(user == null){
+            LOGGER.warn("User not found");
+            throw new UserNotFoundException("User not found");
         }
         List<NotificationEntity> notifications = notificationDao.getNotifications(user);
         HashMap<String, List<NotificationDto>> agrupatedNotifications = new HashMap<>();
@@ -83,10 +84,12 @@ public class NotificationBean {
         return new NotificationDto(notification.getId(), notification.getUser().getUsername(), notification.getType(),
                 notification.getContent(), notification.getSentAt().toString(), notification.isRead());
     }
-    public boolean markAsRead(String token, String id) {
+    public void markAsRead(String token, String id) throws UserNotFoundException {
+        System.out.println("Marking NOTIFICATIONS as read: " + id);
         UserEntity user = userBean.getUserByToken(token);
-        if (user == null) {
-            return false;
+        if(user == null){
+            LOGGER.warn("User not found");
+            throw new UserNotFoundException("User not found");
         }
         List<NotificationEntity> notifications = notificationDao.getNotifications(user);
         for (NotificationEntity notification : notifications) {
@@ -95,8 +98,5 @@ public class NotificationBean {
                 notificationDao.merge(notification);
             }
         }
-        return true;
     }
-
-
 }

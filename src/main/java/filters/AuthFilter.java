@@ -13,10 +13,12 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 @Provider
 @Priority(Priorities.AUTHORIZATION)
@@ -41,6 +43,7 @@ public class AuthFilter implements ContainerRequestFilter {
             return;
         }
         String authHeader = requestContext.getHeaderString("Authorization");
+        System.out.println(authHeader);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
@@ -61,6 +64,24 @@ public class AuthFilter implements ContainerRequestFilter {
         if (method.isAnnotationPresent(RequiresPermission.class)) {
             Function requiredPermissions = method.getAnnotation(RequiresPermission.class).value();
             boolean hasPermission = permissionBean.getPermission(token, requiredPermissions);
+            if (!hasPermission) {
+                requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
+            }
+        }
+        if (method.isAnnotationPresent(RequiresPermissionByTaskId.class)) {
+            int id = requestContext.getUriInfo().getPathParameters().get("id") != null ?
+                    Integer.parseInt(String.valueOf(requestContext.getUriInfo().getPathParameters().get("id").getFirst())) : -1;
+            boolean hasPermission = permissionBean.getPermissionByTaskID(token, id);
+            if (!hasPermission) {
+                requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
+            }
+        }
+        if (method.isAnnotationPresent(RequiresPermissionByUserOnMessage.class)) {
+            UserEntity user = userBean.getUserByToken(token);
+            MultivaluedMap<String, String> usernames = requestContext.getUriInfo().getPathParameters();
+            String sender = usernames.getFirst("sender");
+            String receiver = usernames.getFirst("receiver");
+            boolean hasPermission = (user.getUsername().equals(sender) || user.getUsername().equals(receiver));
             if (!hasPermission) {
                 requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
             }

@@ -2,6 +2,7 @@ package aor.paj.service;
 
 import aor.paj.bean.MessageBean;
 import aor.paj.dto.MessageDto;
+import filters.RequiresPermissionByUserOnMessage;
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -11,10 +12,8 @@ import java.util.List;
 
 @Path("/messages")
 public class MessageService {
-
     @EJB
     private MessageBean messageBean;
-
 
     /**
      * Endpoint to retrieve all messages between two specific users.
@@ -24,14 +23,8 @@ public class MessageService {
     @Path("/{sender}/{receiver}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getMessagesBetweenUsers(@PathParam("sender") String sender, @PathParam("receiver") String receiver) {
-        System.out.println("GET /messages/" + sender + "/" + receiver);
-        List<MessageDto> messageDtos = messageBean.getMessagesBetweenUsers(sender, receiver);
-        System.out.println(messageDtos);
-        if (messageDtos != null) {
-            return Response.status(Response.Status.OK).entity(messageDtos).build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).entity("{\"error\":\"No messages found between the specified users\"}").build();
-        }
+    @RequiresPermissionByUserOnMessage
+    public List<MessageDto> getMessagesBetweenUsers(@PathParam("sender") String sender, @PathParam("receiver") String receiver) {
+        return messageBean.getMessagesBetweenUsers(sender, receiver);
     }
 }

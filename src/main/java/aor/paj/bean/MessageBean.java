@@ -5,17 +5,19 @@ import aor.paj.dto.MessageDto;
 import aor.paj.entity.MessageEntity;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Stateless
 public class MessageBean {
-
     @EJB
     private MessageDao messageDao;
     @EJB
     private UserBean userBean;
+    @EJB
+    private NotificationBean notificationBean;
 
     public MessageEntity sendMessage(MessageDto messageDto) {
         MessageEntity message = convertDtoToEntity(messageDto);

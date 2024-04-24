@@ -1,16 +1,24 @@
 -------------------------------------------------------------------------------
 Test set: aor.paj.bean.TaskBeanTest
 -------------------------------------------------------------------------------
-Tests run: 9, Failures: 0, Errors: 3, Skipped: 0, Time elapsed: 0.082 s <<< FAILURE! - in aor.paj.bean.TaskBeanTest
-testAddTask_Success  Time elapsed: 0.002 s  <<< ERROR!
-java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "aor.paj.dto.TaskDto.getStatus()" is null
-	at aor.paj.bean.TaskBeanTest.testAddTask_Success(TaskBeanTest.java:86)
+Tests run: 9, Failures: 0, Errors: 5, Skipped: 0, Time elapsed: 0.069 s <<< FAILURE! - in aor.paj.bean.TaskBeanTest
+testDeleteTaskPermanently_Failure_TaskNotFound  Time elapsed: 0.008 s  <<< ERROR!
+aor.paj.exception.EntityValidationException: Invalid Task id 
+	at aor.paj.bean.TaskBeanTest.testDeleteTaskPermanently_Failure_TaskNotFound(TaskBeanTest.java:182)
+
+testAddTask_Success  Time elapsed: 0.003 s  <<< ERROR!
+aor.paj.exception.UserConfirmationException: Invalid token
+	at aor.paj.bean.TaskBeanTest.testAddTask_Success(TaskBeanTest.java:85)
 
 testEditTask_Success  Time elapsed: 0.002 s  <<< ERROR!
 java.lang.NullPointerException: Cannot invoke "aor.paj.bean.StatisticsBean.broadcastTaskStatisticsUpdate()" because "this.statisticsBean" is null
-	at aor.paj.bean.TaskBeanTest.testEditTask_Success(TaskBeanTest.java:114)
+	at aor.paj.bean.TaskBeanTest.testEditTask_Success(TaskBeanTest.java:112)
+
+testEditTask_Failure_TaskNotFound  Time elapsed: 0.002 s  <<< ERROR!
+aor.paj.exception.EntityValidationException: Invalid Task id 
+	at aor.paj.bean.TaskBeanTest.testEditTask_Failure_TaskNotFound(TaskBeanTest.java:162)
 
 testDeleteTaskPermanently_Success  Time elapsed: 0.002 s  <<< ERROR!
 java.lang.NullPointerException: Cannot invoke "aor.paj.bean.StatisticsBean.broadcastTaskStatisticsUpdate()" because "this.statisticsBean" is null
-	at aor.paj.bean.TaskBeanTest.testDeleteTaskPermanently_Success(TaskBeanTest.java:137)
+	at aor.paj.bean.TaskBeanTest.testDeleteTaskPermanently_Success(TaskBeanTest.java:134)
 

@@ -1,8 +1,20 @@
 -------------------------------------------------------------------------------
 Test set: aor.paj.bean.UserBeanTest
 -------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.073 s <<< FAILURE! - in aor.paj.bean.UserBeanTest
+Tests run: 8, Failures: 0, Errors: 4, Skipped: 0, Time elapsed: 0.079 s <<< FAILURE! - in aor.paj.bean.UserBeanTest
 testRegisterUser_Success  Time elapsed: 0.003 s  <<< ERROR!
-java.lang.NullPointerException: Cannot invoke "aor.paj.service.EmailService.sendConfirmationEmail(String, String)" because "<local3>.emailService" is null
-	at aor.paj.bean.UserBeanTest.testRegisterUser_Success(UserBeanTest.java:70)
+java.lang.NullPointerException: Cannot invoke "util.EmailService.sendConfirmationEmail(String, String)" because "<local3>.emailService" is null
+	at aor.paj.bean.UserBeanTest.testRegisterUser_Success(UserBeanTest.java:72)
+
+testUpdateUser_Failure  Time elapsed: 0.003 s  <<< ERROR!
+aor.paj.exception.UserNotFoundException: User not found
+	at aor.paj.bean.UserBeanTest.testUpdateUser_Failure(UserBeanTest.java:132)
+
+testDeleteUserPermanently_Success  Time elapsed: 0.003 s  <<< ERROR!
+aor.paj.exception.UserNotFoundException: User not found
+	at aor.paj.bean.UserBeanTest.testDeleteUserPermanently_Success(UserBeanTest.java:101)
+
+testDeleteUserPermanently_Failure  Time elapsed: 0.002 s  <<< ERROR!
+aor.paj.exception.UserNotFoundException: User not found
+	at aor.paj.bean.UserBeanTest.testDeleteUserPermanently_Failure(UserBeanTest.java:152)
 
