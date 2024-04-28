@@ -5,6 +5,7 @@ import aor.paj.dto.CategoryDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.exception.CriticalDataDeletionAttemptException;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import aor.paj.exception.UserConfirmationException;
 import jakarta.ejb.EJB;
@@ -13,20 +14,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.Serializable;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
 
 @Stateless
 public class CategoryBean implements Serializable {
-    private static final Logger LOGGER = LogManager.getLogger(CategoryBean.class);
+    private static final org.apache.logging.log4j.Logger LOGGER = LogManager.getLogger(CategoryBean.class);
 
     @EJB
     CategoryDao categoryDao;
     @EJB
     UserBean userBean;
-    @EJB
-    TaskBean taskBean;
     @EJB
     StatisticsBean statisticsBean;
 
@@ -37,7 +38,7 @@ public class CategoryBean implements Serializable {
         categoryDto.setType(categoryEntity.getType());
         return  categoryDto;
     }
-    public void createDefaultCategoryIfNotExistent(){
+    public void createDefaultCategoryIfNotExistent() throws DatabaseOperationException {
         CategoryEntity defaultCategory = categoryDao.findCategoryByType("No_Category");
 
         if(defaultCategory == null){
@@ -46,15 +47,15 @@ public class CategoryBean implements Serializable {
         }
     }
 
-    public void addCategory(String type, String token) throws UserConfirmationException, EntityValidationException {
+    public void addCategory(String type, String token) throws UserConfirmationException, EntityValidationException, UnknownHostException, DatabaseOperationException {
         UserEntity user = userBean.getUserByToken(token);
         CategoryEntity categoryEntity = categoryDao.findCategoryByType(type);
         if(user == null){
-            LOGGER.warn("Invalid token");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid token");
             throw new UserConfirmationException("Invalid token");
         }
         if(categoryEntity != null){
-            LOGGER.info("Category already exists");
+            LOGGER.info(InetAddress.getLocalHost().getHostAddress() + "Category already exists");
             throw new EntityValidationException("Category already exists");
         }
         CategoryEntity newCategoryEntity = new CategoryEntity();
@@ -70,11 +71,11 @@ public class CategoryBean implements Serializable {
     }
 
 
-    public void editCategory(String newType, String oldType) throws EntityValidationException {
+    public void editCategory(String newType, String oldType) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
         CategoryEntity categoryEntity = categoryDao.findCategoryByType(oldType);
         CategoryEntity newCategoryEntity = categoryDao.findCategoryByType(newType);
         if(categoryEntity == null){
-            LOGGER.warn("Invalid category type: " + oldType);
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid category type: " + oldType);
             throw new EntityValidationException("Invalid category type");
         }
         if(newCategoryEntity != null) {
@@ -86,7 +87,7 @@ public class CategoryBean implements Serializable {
         statisticsBean.broadcastCategoryStatisticsUpdate();
     }
 
-    public void deleteCategory(String category_type) throws CriticalDataDeletionAttemptException, EntityValidationException {
+    public void deleteCategory(String category_type) throws CriticalDataDeletionAttemptException, EntityValidationException, DatabaseOperationException {
         CategoryEntity categoryEntity = categoryDao.findCategoryByType(category_type);
         if(categoryEntity == null){
             LOGGER.warn("Invalid category type: " + category_type);
@@ -100,7 +101,7 @@ public class CategoryBean implements Serializable {
         statisticsBean.broadcastCategoryStatisticsUpdate();
     }
 
-    public boolean hasThisCategoryTasks(String type){
+    public boolean hasThisCategoryTasks(String type) throws DatabaseOperationException {
         List<CategoryDto> catList = getCategoriesWithTasks();
         for(CategoryDto cat: catList){
             if(cat.getType().equals(type)){
@@ -109,7 +110,7 @@ public class CategoryBean implements Serializable {
         }
         return false;
     }
-    public List<CategoryDto> getCategoriesWithTasks(){
+    public List<CategoryDto> getCategoriesWithTasks() throws DatabaseOperationException {
         List<CategoryEntity> categories = categoryDao.findCategoriesWithTasks();
         List<CategoryDto> categoriesWithTasks = new ArrayList<>();
         for(CategoryEntity category: categories){

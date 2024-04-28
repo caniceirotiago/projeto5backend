@@ -46,7 +46,6 @@ public abstract class AbstractDao<T extends Serializable> implements Serializabl
 	public void remove(final T entity) 
 	{
 		em.remove(em.contains(entity) ? entity : em.merge(entity));
-		System.out.println("Entity removed: " + entity);
 	}
 	
 

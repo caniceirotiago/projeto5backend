@@ -1,5 +1,6 @@
 package aor.paj.bean;
 
+import aor.paj.exception.DatabaseOperationException;
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Singleton;
@@ -19,12 +20,12 @@ public class StartupBean {
     ConfigurationBean configurationBean;
 
     @PostConstruct
-    public void init() {
+    public void init() throws DatabaseOperationException {
         userBean.createDefaultUsersIfNotExistent();
         categoryBean.createDefaultCategoryIfNotExistent();
         initializeDefaultConfigurations();
     }
-    private void initializeDefaultConfigurations() {
+    private void initializeDefaultConfigurations() throws DatabaseOperationException {
         configurationBean.initializeDefaultConfigurations();
     }
 }

@@ -7,6 +7,7 @@ import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.userRoleManager;
@@ -21,6 +22,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +38,7 @@ import java.util.List;
 
 @Stateless
 public class TaskBean implements Serializable {
-    private static final Logger LOGGER = LogManager.getLogger(TaskBean.class);
+    private static final org.apache.logging.log4j.Logger LOGGER = LogManager.getLogger(TaskBean.class);
 
     @EJB
     TaskDao taskDao;
@@ -72,16 +75,16 @@ public class TaskBean implements Serializable {
         taskDto.setDeleted(taskEntity.isDeleted());
         return taskDto;
     }
-    public void addTask(String token, TaskDto taskDto) throws EntityValidationException, UserConfirmationException {
+    public void addTask(String token, TaskDto taskDto) throws EntityValidationException, UserConfirmationException, UnknownHostException, DatabaseOperationException {
         String categoryName = taskDto.getCategory_type();
         CategoryEntity categoryEntity = categoryDao.findCategoryByType(categoryName);
         UserEntity userEntity=userBean.getUserByToken(token);
         if (categoryEntity == null) {
-            LOGGER.warn("Invalid category type: " + categoryName);
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid category type: " + categoryName);
             throw new EntityValidationException("Invalid category type");
         }
         if(userEntity == null){
-            LOGGER.warn("Invalid token: " + token + " for task creation");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid token: " + token + " for task creation");
             throw new UserConfirmationException("Invalid token");
         }
         TaskEntity taskEntity=convertTaskDtotoTaskEntity(taskDto);
@@ -106,13 +109,20 @@ public class TaskBean implements Serializable {
         return taskDao.findTaskById(task_id);
     }
 
-    public void editTask(int id, TaskDto taskDto) throws EntityValidationException {
+    public void editTask(int id, TaskDto taskDto) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
         TaskEntity taskEntity=taskDao.findTaskById(id);
-        boolean isPreviousTaskDeleteded = taskEntity.isDeleted();
         if(taskEntity==null){
-            LOGGER.warn("Invalid Task id");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid Task id");
             throw new EntityValidationException("Invalid Task id ");
         }
+        if (taskDto.getCategory_type() != null) {
+            CategoryEntity category = categoryDao.findCategoryByType(taskDto.getCategory_type());
+            if (category == null) {
+                LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid category type: " + taskDto.getCategory_type());
+                throw new EntityValidationException("Invalid category type");
+            }
+        }
+        boolean isPreviousTaskDeleteded = taskEntity.isDeleted();
         if(taskDto.getCategory_type() != null)taskEntity.setCategory(categoryDao.findCategoryByType(taskDto.getCategory_type()));
         if(taskDto.getTitle() != null)taskEntity.setTitle(taskDto.getTitle());
         if(taskDto.getDescription() != null)taskEntity.setDescription(taskDto.getDescription());
@@ -137,10 +147,10 @@ public class TaskBean implements Serializable {
             TaskWebSocket.broadcast("recycleTask", updatedDto);
         }
     }
-    public TaskDto getTaskDtoById(int id) throws EntityValidationException {
+    public TaskDto getTaskDtoById(int id) throws EntityValidationException, UnknownHostException {
         TaskEntity taskEntity=taskDao.findTaskById(id);
         if(taskEntity==null){
-            LOGGER.warn("Invalid Task id");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid Task id");
             throw new EntityValidationException("Invalid Task id ");
         }
         return convertTaskEntitytoTaskDto(taskEntity);
@@ -150,10 +160,10 @@ public class TaskBean implements Serializable {
         if(newStatus == 300) taskEntity.setDoneTimestamp(LocalDateTime.now());
         return taskEntity;
     }
-    public void deleteTaskPermanently(int id) throws EntityValidationException {
+    public void deleteTaskPermanently(int id) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
         TaskEntity taskEntity=taskDao.findTaskById(id);
         if(taskEntity==null) {
-            LOGGER.warn("Invalid Task id");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid Task id");
             throw new EntityValidationException("Invalid Task id ");
         }
         taskDao.deleteTask(id);
@@ -183,9 +193,9 @@ public class TaskBean implements Serializable {
         }
         return tasksDtos;
     }
-    public void deleteAllTasksByUser(String username) throws UserConfirmationException {
+    public void deleteAllTasksByUser(String username) throws UserConfirmationException, UnknownHostException, DatabaseOperationException {
         if(userBean.getUserByUsername(username)==null){
-            LOGGER.warn("Invalid username: " + username + " for task deletion");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() + "Invalid username: " + username + " for task deletion");
             throw new UserConfirmationException("Invalid username");
         }
         List<TaskEntity> tasks = taskDao.getTasksByFilter(false, username, null);

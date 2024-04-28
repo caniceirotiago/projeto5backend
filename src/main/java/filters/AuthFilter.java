@@ -18,6 +18,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 
 import java.lang.reflect.Method;
+import java.net.UnknownHostException;
 import java.util.List;
 
 @Provider
@@ -53,6 +54,8 @@ public class AuthFilter implements ContainerRequestFilter {
                     abortUnauthorized(requestContext);
                 }
             } catch (UserNotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
             }
         } else {

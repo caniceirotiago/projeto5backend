@@ -31,6 +31,8 @@ public class NotificationEntity implements Serializable {
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
+    @Column(name = "photo_url")
+    private String photoURL;
 
     public Long getId() {
         return id;
@@ -80,6 +82,14 @@ public class NotificationEntity implements Serializable {
         isRead = read;
     }
 
+    public String getPhotoURL() {
+        return photoURL;
+    }
+
+    public void setPhotoURL(String photoURL) {
+        this.photoURL = photoURL;
+    }
+
     @Override
     public String toString() {
         return "NotificationEntity{" +
@@ -89,6 +99,9 @@ public class NotificationEntity implements Serializable {
                 ", content='" + content + '\'' +
                 ", sentAt=" + sentAt +
                 ", isRead=" + isRead +
+                ", photoURL='" + photoURL + '\'' +
                 '}';
     }
+
+
 }

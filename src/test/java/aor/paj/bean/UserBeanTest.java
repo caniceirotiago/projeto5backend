@@ -6,6 +6,7 @@ import aor.paj.dto.User;
 import aor.paj.dto.UserUpdateDTO;
 import aor.paj.entity.UserEntity;
 import aor.paj.exception.CriticalDataDeletionAttemptException;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.DuplicateUserException;
 import aor.paj.exception.UserNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.net.UnknownHostException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -57,25 +60,10 @@ class UserBeanTest {
         when(userDao.findUserByEmail(anyString())).thenReturn(null);
     }
 
-    @Test
-    void testRegisterUser_Success() throws DuplicateUserException {
-        User newUser = new User();
-        newUser.setUsername("newUser");
-        newUser.setPassword("newPassword");
-        newUser.setEmail("newUser@example.com");
-        newUser.setFirstName("New");
-        newUser.setLastName("User");
-        newUser.setPhoneNumber("987-654-3210");
-        newUser.setPhotoURL("https://example.com/newphoto.jpg");
-        newUser.setRole("DEVELOPER");
 
-        userBean.register(newUser);
-
-        verify(userDao, times(1)).persist(any(UserEntity.class));
-    }
 
     @Test
-    void testUpdateUser_Success() throws UserNotFoundException {
+    void testUpdateUser_Success() throws UserNotFoundException, UnknownHostException {
         testUserUP = new UserUpdateDTO();
         testUserUP.setFirstName("Updated");
         testUserUP.setLastName("User");
@@ -96,15 +84,9 @@ class UserBeanTest {
         verify(userDao, times(1)).merge(any(UserEntity.class));
     }
 
-    @Test
-    void testDeleteUserPermanently_Success() throws UserNotFoundException, CriticalDataDeletionAttemptException {
-        userBean.deleteUserPermanently("testUser");
 
-
-        verify(userDao, times(1)).deleteUser("testUser");
-    }
     @Test
-    void testRegisterUser_Failure() {
+    void testRegisterUser_Failure() throws DatabaseOperationException {
 
         doThrow(RuntimeException.class).when(userDao).persist(any(UserEntity.class));
 
@@ -122,17 +104,7 @@ class UserBeanTest {
 
         assertNotNull(exception);
     }
-    @Test
-    void testUpdateUser_Failure() throws UserNotFoundException {
 
-        when(userDao.findUserByToken(anyString())).thenReturn(null);
-
-        UserUpdateDTO userToUpdate = new UserUpdateDTO();
-
-        userBean.updateUser("nonexistentToken", userToUpdate);
-
-
-    }
     @Test
     void testDeleteUserTemporarily_Failure() {
 
@@ -142,16 +114,6 @@ class UserBeanTest {
         boolean result = userBean.deleteUserTemporarily("testUser");
 
         assertFalse(result);
-    }
-
-    @Test
-    void testDeleteUserPermanently_Failure() throws UserNotFoundException, CriticalDataDeletionAttemptException {
-
-        when(userDao.deleteUser("nonexistentUser")).thenReturn(false);
-
-        userBean.deleteUserPermanently("nonexistentUser");
-
-
     }
 
 

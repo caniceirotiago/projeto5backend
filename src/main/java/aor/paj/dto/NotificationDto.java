@@ -7,14 +7,25 @@ public class NotificationDto {
     private String content;
     private String sentAt;
     private boolean isRead;
+    private String photoUrl;
 
-    public NotificationDto(Long id, String userId, String type, String content, String sentAt, boolean isRead) {
+
+    public NotificationDto(Long id, String userId, String type, String content, String sentAt, boolean isRead, String photoUrl) {
         this.id = id;
         this.userId = userId;
         this.type = type;
         this.content = content;
         this.sentAt = sentAt;
         this.isRead = isRead;
+        this.photoUrl = photoUrl;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public void setPhotoUrl(String photoUrl) {
+        this.photoUrl = photoUrl;
     }
 
     public Long getId() {
@@ -74,6 +85,7 @@ public class NotificationDto {
                 ", content='" + content + '\'' +
                 ", sentAt='" + sentAt + '\'' +
                 ", isRead=" + isRead +
+                ", photoUrl='" + photoUrl + '\'' +
                 '}';
     }
 }

@@ -4,6 +4,8 @@ package aor.paj.service.websocket;
 
 import aor.paj.bean.NotificationBean;
 import aor.paj.dto.NotificationDto;
+import aor.paj.dto.User;
+import aor.paj.entity.UserEntity;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import jakarta.ejb.EJB;
@@ -20,10 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.gson.Gson;
 import util.GsonSetup;
 
-import javax.naming.InitialContext;
 @ApplicationScoped
-@ServerEndpoint("/notification/{token}")
-public class NotificationsWebSocket {
+@ServerEndpoint("/globalws/{token}")
+public class GlobalWebSocket {
     private static final Map<String, Session> userSessions = new ConcurrentHashMap<>();
     static Gson gson = GsonSetup.createGson();
     @Inject
@@ -36,7 +37,7 @@ public class NotificationsWebSocket {
     @OnOpen
     public void onOpen(Session session, @PathParam("token") String token) {
 
-        System.out.println("Notification WebSocket connection opened");
+        System.out.println("Global WebSocket connection opened");
         try {
             boolean validated = userBean.tokenValidator(token);
             System.out.println("Token received: " + token);
@@ -44,7 +45,7 @@ public class NotificationsWebSocket {
             String username = validated ? userBean.getUserByToken(token).getUsername() : null;
             if (username != null) {
                 userSessions.put(username, session);
-                System.out.println("Notification WebSocket connection opened for user: " + username);
+                System.out.println("Global WebSocket connection opened for user: " + username);
             } else {
                 session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "Unauthorized"));
             }
@@ -54,14 +55,14 @@ public class NotificationsWebSocket {
     }
     @OnClose
     public void onClose(Session session, @PathParam("token") String token) {
-        String username = userBean.getUserByToken(token).getUsername(); // Obtém o nome de usuário do token
+        String username = userBean.getUserByToken(token).getUsername();
         userSessions.remove(username);
-        System.out.println("Notification WebSocket connection closed for user: " + username);
+        System.out.println("Global WebSocket connection closed for user: " + username);
     }
 
     @OnError
     public void onError(Session session, Throwable throwable) {
-        System.out.println("Notification error: " + throwable.getMessage());
+        System.out.println("Global ws error: " + throwable.getMessage());
     }
 
     @OnMessage
@@ -87,6 +88,16 @@ public class NotificationsWebSocket {
             }
         }
 
+    }
+    public static void sendForcedLogoutRequest(UserEntity user) {
+        Session receiverSession = userSessions.get(user.getUsername());
+        if (receiverSession != null && receiverSession.isOpen()) {
+            try {
+                receiverSession.getBasicRemote().sendText(gson.toJson(new WebSocketMessage("forcedLogout", null)));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public static void broadcast(String message) {

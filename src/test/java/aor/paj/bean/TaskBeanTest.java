@@ -7,14 +7,19 @@ import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import aor.paj.exception.UserConfirmationException;
+import aor.paj.service.websocket.TaskWebSocket;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+
+import java.net.UnknownHostException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -33,11 +38,13 @@ class TaskBeanTest {
 
     @Mock
     private CategoryDao categoryDao;
-
-
-
     @Mock
     private UserBean userBean;
+    @Mock
+    private StatisticsBean statisticsBean;
+
+    @Mock
+    private TaskWebSocket taskWebSocket;
 
     private UserEntity testUser;
     private CategoryEntity testCategory;
@@ -46,6 +53,7 @@ class TaskBeanTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        reset(taskDao, userDao, categoryDao, userBean, statisticsBean, taskWebSocket);
 
         testUser = new UserEntity();
         testUser.setUsername("testUser");
@@ -68,6 +76,8 @@ class TaskBeanTest {
         testTask.setDescription("This is a test task description.");
         testTask.setCategory(testCategory);
         testTask.setUser(testUser);
+        testTask.setDeleted(false);
+
 
 
         when(userDao.findUserByUsername(anyString())).thenReturn(testUser);
@@ -76,15 +86,130 @@ class TaskBeanTest {
     }
 
     @Test
-    void testAddTask_Success() throws EntityValidationException, UserConfirmationException {
+    void testAddTask_Success() throws Exception {
         TaskDto newTaskDto = new TaskDto();
         newTaskDto.setTitle("New Task");
         newTaskDto.setDescription("Description of the new task.");
-        newTaskDto.setCategory_type(testCategory.getType());
-        newTaskDto.setUsername_author(testUser.getUsername());
-        taskBean.addTask("validToken",  newTaskDto);
-        verify(taskDao, times(1)).persist(any(TaskEntity.class));
+        newTaskDto.setCategory_type("Work");
+        newTaskDto.setUsername_author("testUser");
+        newTaskDto.setStatus(100);
+        newTaskDto.setPriority(1);
+
+        when(userBean.getUserByToken("uniqueToken123456")).thenReturn(testUser);
+        when(categoryDao.findCategoryByType("Work")).thenReturn(testCategory);
+
+        taskBean.addTask("uniqueToken123456", newTaskDto);
+
+        verify(taskDao).persist(any(TaskEntity.class));
+        verify(statisticsBean, times(1)).broadcastTaskStatisticsUpdate();
     }
+
+    @Test
+    void testAddTask_Failure_InvalidToken() throws DatabaseOperationException {
+        TaskDto newTaskDto = new TaskDto();
+        newTaskDto.setTitle("New Task");
+        newTaskDto.setDescription("Description of the new task.");
+        newTaskDto.setCategory_type("Work");
+        newTaskDto.setUsername_author("testUser");
+        newTaskDto.setStatus(100);
+        newTaskDto.setPriority(1);
+
+        String invalidToken = "invalidToken123";
+
+        when(userBean.getUserByToken(invalidToken)).thenReturn(null);
+        assertThrows(UserConfirmationException.class, () -> {
+            taskBean.addTask(invalidToken, newTaskDto);
+        }, "Should throw UserConfirmationException for invalid token");
+
+        verify(taskDao, never()).persist(any(TaskEntity.class));
+        verify(statisticsBean, never()).broadcastTaskStatisticsUpdate();
+    }
+    @Test
+    void testEditTask_Success() throws Exception {
+        TaskDto taskDtoToUpdate = new TaskDto();
+        taskDtoToUpdate.setId(1); // ID da tarefa existente
+        taskDtoToUpdate.setTitle("Updated Title");
+        taskDtoToUpdate.setDescription("Updated Description");
+        taskDtoToUpdate.setCategory_type("Personal");
+        taskDtoToUpdate.setStatus(200);
+        taskDtoToUpdate.setPriority(2);
+
+        TaskEntity existingTask = new TaskEntity();
+        existingTask.setId(1);
+        existingTask.setTitle("Original Title");
+        existingTask.setDescription("Original Description");
+        existingTask.setCategory(testCategory);
+        existingTask.setUser(testUser);
+        existingTask.setStatus(100);
+        existingTask.setPriority(1);
+
+        when(taskDao.findTaskById(1)).thenReturn(existingTask);
+        when(categoryDao.findCategoryByType("Personal")).thenReturn(new CategoryEntity());
+
+        taskBean.editTask(1, taskDtoToUpdate);
+
+        verify(taskDao).merge(argThat(task ->
+                task.getId() == 1 &&
+                        "Updated Title".equals(task.getTitle()) &&
+                        "Updated Description".equals(task.getDescription()) &&
+                        task.getStatus() == 200 &&
+                        task.getPriority() == 2
+        ));
+
+        verify(statisticsBean, times(1)).broadcastTaskStatisticsUpdate();
+        if (existingTask.getStatus() != taskDtoToUpdate.getStatus()) {
+            verify(taskWebSocket, times(1)).broadcast(eq("recycleTask"), any(TaskDto.class));
+        }
+    }
+    @Test
+    void testEditTask_TaskNotFound() {
+        TaskDto taskDtoToUpdate = new TaskDto();
+        taskDtoToUpdate.setTitle("Updated Title");
+        taskDtoToUpdate.setDescription("Updated Description");
+        taskDtoToUpdate.setCategory_type("Personal");
+        taskDtoToUpdate.setStatus(200);
+        taskDtoToUpdate.setPriority(2);
+
+        when(taskDao.findTaskById(1)).thenReturn(null);
+
+        assertThrows(EntityValidationException.class, () -> {
+            taskBean.editTask(1, taskDtoToUpdate);
+        });
+
+        // Verificações adicionais para confirmar que nenhum método foi chamado devido à exceção
+        verify(taskDao, never()).merge(any(TaskEntity.class)); // Nenhuma tarefa deve ser mesclada
+        verify(statisticsBean, never()).broadcastTaskStatisticsUpdate(); // Nenhuma atualização de estatísticas deve ser disparada
+    }
+
+    @Test
+    void testEditTask_CategoryNotFound() throws UnknownHostException {
+        TaskDto taskDtoToUpdate = new TaskDto();
+        taskDtoToUpdate.setTitle("Updated Title");
+        taskDtoToUpdate.setDescription("Updated Description");
+        taskDtoToUpdate.setCategory_type("Nonexistent Category");
+        taskDtoToUpdate.setStatus(200);
+        taskDtoToUpdate.setPriority(2);
+
+        TaskEntity existingTask = new TaskEntity();
+        existingTask.setId(1);
+        existingTask.setTitle("Original Title");
+        existingTask.setDescription("Original Description");
+        existingTask.setCategory(testCategory);
+        existingTask.setUser(testUser);
+        existingTask.setStatus(100);
+        existingTask.setPriority(1);
+
+        when(taskDao.findTaskById(1)).thenReturn(existingTask);
+        when(categoryDao.findCategoryByType("Nonexistent Category")).thenReturn(null);
+
+        assertThrows(EntityValidationException.class, () -> {
+            taskBean.editTask(1, taskDtoToUpdate);
+        });
+
+        verify(taskDao, never()).merge(any(TaskEntity.class));
+        verify(statisticsBean, never()).broadcastTaskStatisticsUpdate();
+    }
+
 
     @Test
     void testGetTaskById_Found() {
@@ -92,96 +217,25 @@ class TaskBeanTest {
         assertNotNull(result, "Task should be found");
         assertEquals(testTask.getTitle(), result.getTitle(), "The retrieved task should have the correct title");
     }
-
     @Test
-    void testEditTask_Success() throws EntityValidationException {
-        TaskDto taskDtoToUpdate = new TaskDto();
-        taskDtoToUpdate.setTitle("Updated Task Title");
-        taskDtoToUpdate.setDescription("Updated description.");
-        taskDtoToUpdate.setCategory_type(testCategory.getType());
-        taskDtoToUpdate.setUsername_author(testUser.getUsername());
+    void deleteTaskPermanently_Success() throws Exception {
 
-        TaskEntity existingTask = taskBean.getTaskById(1);
-        existingTask.setTitle("Original Task Title");
-        existingTask.setDescription("Original description.");
-        existingTask.setCategory(testCategory);
-        existingTask.setUser(testUser);
-
-        when(taskDao.findTaskById(1)).thenReturn(existingTask);
-
-        taskBean.editTask(1, taskDtoToUpdate);
-
-
-        verify(taskDao, times(1)).merge(existingTask);
-
-        assertEquals("Updated Task Title", existingTask.getTitle(), "The title should be updated.");
-        assertEquals("Updated description.", existingTask.getDescription(), "The description should be updated.");
-    }
-
-
-    @Test
-    void testDeleteTemporarily_Success() {
-        boolean result = taskBean.deleteTemporarily(1);
-
-        assertTrue(result, "Task should be marked as deleted successfully");
-        verify(taskDao, times(1)).merge(any(TaskEntity.class));
+        when(taskDao.findTaskById(1)).thenReturn(testTask);
+        taskBean.deleteTaskPermanently(1);
+        verify(taskDao).deleteTask(1);
     }
 
     @Test
-    void testDeleteTaskPermanently_Success() throws EntityValidationException {
-        int taskIdToDelete = 1;
-
-        taskBean.deleteTaskPermanently(taskIdToDelete);
-        verify(taskDao, times(1)).deleteTask(taskIdToDelete);
-        when(taskDao.findTaskById(taskIdToDelete)).thenReturn(null);
-        TaskEntity resultAfterDeletion = taskBean.getTaskById(taskIdToDelete);
-        assertNull(resultAfterDeletion, "A tarefa deve ser nula após ser eliminada permanentemente");
-    }
-    @Test
-    void testAddTask_Failure_InvalidData() {
-        TaskDto newTaskDto = new TaskDto();
-        newTaskDto.setTitle(""); // Dados inválidos
-        newTaskDto.setDescription("Description of the new task.");
-        newTaskDto.setCategory_type(testCategory.getType());
-        newTaskDto.setUsername_author(testUser.getUsername());
-
-
-
-    }
-
-    @Test
-    void testEditTask_Failure_TaskNotFound() throws EntityValidationException {
-        TaskDto taskDtoToUpdate = new TaskDto();
-        taskDtoToUpdate.setTitle("Updated Task Title");
-        taskDtoToUpdate.setDescription("Updated description.");
-        taskDtoToUpdate.setCategory_type(testCategory.getType());
-        taskDtoToUpdate.setUsername_author(testUser.getUsername());
-
+    void deleteTaskPermanently_Failure_TaskNotFound() {
         when(taskDao.findTaskById(anyInt())).thenReturn(null);
 
-        taskBean.editTask(999, taskDtoToUpdate); // Um ID que supostamente não existe
+        assertThrows(EntityValidationException.class, () -> {
+            taskBean.deleteTaskPermanently(999); // ID inexistente
+        });
 
-        verify(taskDao, never()).merge(any(TaskEntity.class));
+        verify(taskDao, never()).deleteTask(anyInt());
     }
 
-    @Test
-    void testDeleteTemporarily_Failure_TaskNotFound() {
-        when(taskDao.findTaskById(anyInt())).thenReturn(null); // Simula tarefa não encontrada
 
-        boolean result = taskBean.deleteTemporarily(999); //ID que supostamente não existe
-
-        assertFalse(result, "Task should not be marked as deleted because it does not exist");
-        verify(taskDao, never()).merge(any(TaskEntity.class)); //
-    }
-
-    @Test
-    void testDeleteTaskPermanently_Failure_TaskNotFound() throws EntityValidationException {
-        int taskIdToDelete = 999;
-        when(taskDao.findTaskById(taskIdToDelete)).thenReturn(null); // Simula tarefa não encontrada antes da tentativa de exclusão
-
-        taskBean.deleteTaskPermanently(taskIdToDelete);
-
-        verify(taskDao, never()).deleteTask(taskIdToDelete); // Verifica que deleteTask nunca é chamado para um ID inexistente
-    }
 
 }

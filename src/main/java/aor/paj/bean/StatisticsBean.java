@@ -1,5 +1,6 @@
 package aor.paj.bean;
 
+import aor.paj.dao.CategoryDao;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.CategoryDto;
@@ -7,6 +8,7 @@ import aor.paj.dto.Statistics.*;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.taskStatusManager;
@@ -18,6 +20,8 @@ import jakarta.ejb.Stateless;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -29,13 +33,16 @@ import java.util.stream.Collectors;
 
 @Stateless
 public class StatisticsBean {
-    private static final Logger LOGGER = LogManager.getLogger(StatisticsBean.class);
+    private static final org.apache.logging.log4j.Logger LOGGER = LogManager.getLogger(StatisticsBean.class);
+
     @EJB
     UserDao userDao;
     @EJB
     TaskDao taskDao;
     @EJB
     CategoryBean categoryBean;
+    @EJB
+    CategoryDao categoryDao;
     private final Gson gson = new Gson();
     public int numberOfConfirmedUsers(){
         return userDao.getConfirmedUsers().size();
@@ -55,10 +62,20 @@ public class StatisticsBean {
     public int numberOfDONETasks() {
         return taskDao.getTasksByStatus(taskStatusManager.DONE);
     }
-    public List<CategoryDto> getOrderCategoriesByNumberOfTasks() {
-        List<CategoryDto> orderedList = categoryBean.convertCategoryEntitiesToCategoryDtos(taskDao.getCategoriesByNumberOfTasks());
-        return orderedList;
+
+    public Map<String, Long> getOrderCategoriesByNumberOfTasks() throws DatabaseOperationException {
+        List<Object[]> results = categoryDao.getCategoryStatistics();
+        Map<String, Long> categoryStatistics = new HashMap<>();
+        if (results != null) {
+            for (Object[] result : results) {
+                CategoryEntity category = (CategoryEntity) result[0];
+                Long taskCount = (Long) result[1];
+                categoryStatistics.put(category.getType(), taskCount);
+            }
+        }
+        return categoryStatistics;
     }
+
     public String calculateAverageCompletionTime() {
         List<TaskEntity> tasks = taskDao.findAllCompletedTasksWithTimestamps(taskStatusManager.DONE);
         long totalDuration = 0;
@@ -67,13 +84,11 @@ public class StatisticsBean {
             totalDuration += duration.getSeconds();
         }
         Duration averageDuration = tasks.isEmpty() ? Duration.ZERO : Duration.ofSeconds(totalDuration / tasks.size());
-
-        // Convert the total seconds into days, hours, and minutes
         long days = averageDuration.toDays();
         long hours = averageDuration.toHoursPart();
         long minutes = averageDuration.toMinutesPart();
 
-        return String.format("%d days, %d hours, %d minutes", days, hours, minutes);
+        return String.format("%d d, %d h, %d m", days, hours, minutes);
     }
 
     public HashMap<String, Integer> getNumberOfConfirmedUsersByMonth() {
@@ -90,7 +105,7 @@ public class StatisticsBean {
 
         return new HashMap<>(tasksByWeek);
     }
-    public DashboardDTO createDashboardDto() {
+    public DashboardDTO createDashboardDto() throws DatabaseOperationException {
         UsersStatisticsDTO usersDTO = createUserStatisticsDTO();
         TasksStatisticsDTO tasksDTO = createTasksStatisticsDTO();
         CategoryStatisticsDTO categoryDTO = createCategoryStatisticsDTO();
@@ -116,9 +131,11 @@ public class StatisticsBean {
         dto.setTasksPerWeek(getNumberOfCompletedTasksByWeek());
         return dto;
     }
-    public CategoryStatisticsDTO createCategoryStatisticsDTO() {
-        return new CategoryStatisticsDTO(getOrderCategoriesByNumberOfTasks());
+    public CategoryStatisticsDTO createCategoryStatisticsDTO() throws DatabaseOperationException {
+        Map<String, Long> categoriesStats = getOrderCategoriesByNumberOfTasks();
+        return new CategoryStatisticsDTO(categoriesStats);
     }
+
     public void broadcastUserStatisticsUpdate() {
         UsersStatisticsDTO usersStats = createUserStatisticsDTO();
         String jsonUsersStats = gson.toJson(new WebSocketMessage("userStatistics", usersStats));
@@ -132,15 +149,15 @@ public class StatisticsBean {
         DashboardWebSocket.broadcast(jsonTasksStats);
     }
 
-    public void broadcastCategoryStatisticsUpdate() {
-        CategoryStatisticsDTO categoriesStats = createCategoryStatisticsDTO();
+    public void broadcastCategoryStatisticsUpdate() throws DatabaseOperationException {
+        CategoryStatisticsDTO categoriesStats = (CategoryStatisticsDTO) createCategoryStatisticsDTO();
         String jsonCategoriesStats = gson.toJson(new WebSocketMessage("categoryStatistics", categoriesStats));
         DashboardWebSocket.broadcast(jsonCategoriesStats);
     }
-    public IndividualUserStatisticsDto createIndividualUserStatisticsDTO(String username) throws UserConfirmationException {
+    public IndividualUserStatisticsDto createIndividualUserStatisticsDTO(String username) throws UserConfirmationException, UnknownHostException {
         UserEntity user = userDao.findUserByUsername(username);
         if (user == null) {
-            LOGGER.warn("Invalid username: " + username + " for individual user statistics");
+            LOGGER.warn(InetAddress.getLocalHost().getHostAddress() +  "Invalid username: " + username + " for individual user statistics");
             throw new UserConfirmationException("Invalid username");
         }
         IndividualUserStatisticsDto dto = new IndividualUserStatisticsDto();

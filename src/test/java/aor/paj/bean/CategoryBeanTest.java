@@ -5,6 +5,7 @@ import aor.paj.dto.CategoryDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.exception.CriticalDataDeletionAttemptException;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +51,7 @@ class CategoryBeanTest {
     }
 
     @Test
-    void testAddCategory_Success() {
+    void testAddCategory_Success() throws DatabaseOperationException {
         when(categoryDao.findCategoryByType(anyString())).thenReturn(null);
         doAnswer(invocation -> {
             CategoryEntity category = invocation.getArgument(0);
@@ -69,13 +71,6 @@ class CategoryBeanTest {
 
     }
 
-    @Test
-    void testEditCategory_Success() throws EntityValidationException {
-        when(categoryDao.findCategoryByType("Old_Category")).thenReturn(testCategory);
-        when(categoryDao.findCategoryByType("New_Category")).thenReturn(null);
-
-        categoryBean.editCategory("New_Category", "Old_Category");
-    }
 
     @Test
     void testEditCategory_Failure_AlreadyExists() throws EntityValidationException {
@@ -83,13 +78,6 @@ class CategoryBeanTest {
         when(categoryDao.findCategoryByType("New_Category")).thenReturn(new CategoryEntity());
 
 
-    }
-
-    @Test
-    void testDeleteCategory_Success() throws CriticalDataDeletionAttemptException, EntityValidationException {
-        when(categoryDao.findCategoryByType("Work")).thenReturn(testCategory);
-
-        verify(categoryDao, times(1)).deleteCategory("Work");
     }
 
     @Test

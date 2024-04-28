@@ -7,6 +7,7 @@ import aor.paj.dto.CategoryDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.exception.CriticalDataDeletionAttemptException;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.Function;
@@ -18,6 +19,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +44,7 @@ public class CategoryService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.ADD_NEW_CATEGORY)
-    public void addCategory(@PathParam("type")String type, @HeaderParam("Authorization") String authHeader) throws UserConfirmationException, EntityValidationException {
+    public void addCategory(@PathParam("type")String type, @HeaderParam("Authorization") String authHeader) throws UserConfirmationException, EntityValidationException, UnknownHostException, DatabaseOperationException {
         String token = authHeader.substring(7);
         categoryBean.addCategory(type, token);
     }
@@ -54,7 +56,7 @@ public class CategoryService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.EDIT_CATEGORY)
-    public void editCategory (@PathParam("newType") String newType,@PathParam("oldType")String oldType) throws EntityValidationException {
+    public void editCategory (@PathParam("newType") String newType,@PathParam("oldType")String oldType) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
         categoryBean.editCategory(newType, oldType);
     }
     /**
@@ -64,7 +66,7 @@ public class CategoryService {
     @Path("/delete/{type}")
     @Consumes(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.DELETE_CATEGORY)
-    public void deleteCaTEGORY(@PathParam("type")String type) throws CriticalDataDeletionAttemptException, EntityValidationException {
+    public void deleteCaTEGORY(@PathParam("type")String type) throws CriticalDataDeletionAttemptException, EntityValidationException, DatabaseOperationException {
         categoryBean.deleteCategory(type);
     }
     /**
@@ -73,7 +75,7 @@ public class CategoryService {
     @GET
     @Path("/categoriesWithTasks")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<CategoryDto> getCategoriesWithTasks() {
+    public List<CategoryDto> getCategoriesWithTasks() throws DatabaseOperationException {
         return categoryBean.getCategoriesWithTasks();
     }
 }

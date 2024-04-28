@@ -6,6 +6,7 @@ import java.util.Set;
 
 @Entity
 @Table(name="category")
+@NamedQuery(name="Category.getCategoryStatistics", query="SELECT c, COUNT(t) FROM CategoryEntity c LEFT JOIN c.tasks t WHERE t.deleted = false GROUP BY c")
 @NamedQuery(name = "Category.findCategoryByType", query = "SELECT c FROM CategoryEntity c " +
         "WHERE c.type = :type")
 @NamedQuery(name = "Category.findCategoryById", query = "SELECT c FROM CategoryEntity c " +

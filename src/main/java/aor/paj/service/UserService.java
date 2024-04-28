@@ -9,6 +9,8 @@ import jakarta.ejb.EJB;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+
+import java.net.UnknownHostException;
 import java.util.List;
 
 @Path("/users")
@@ -28,22 +30,22 @@ public class UserService {
     @POST
     @Path("/register")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void addUser(@Valid User user) throws DuplicateUserException {userBean.register(user);}
+    public void addUser(@Valid User user) throws DuplicateUserException, UnknownHostException {userBean.register(user);}
 
     @POST
     @Path("/confirm")
-    public void confirmRegistration(@QueryParam("token") String token) throws UserConfirmationException {
+    public void confirmRegistration(@QueryParam("token") String token) throws UserConfirmationException, UnknownHostException {
         userBean.confirmUser(token);}
     @POST
     @Path("/request-password-reset")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void requestPasswordReset(ResetPasswordRequestDTO requestPasswordResetDto) throws InvalidPasswordRequestException {
+    public void requestPasswordReset(ResetPasswordRequestDTO requestPasswordResetDto) throws InvalidPasswordRequestException, UnknownHostException {
         userBean.requestPasswordReset(requestPasswordResetDto.getEmail());
     }
     @POST
     @Path("/reset-password")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void resetPassword(@Valid ResetPasswordDTO resetPasswordDto) throws InvalidPasswordRequestException {
+    public void resetPassword(@Valid ResetPasswordDTO resetPasswordDto) throws InvalidPasswordRequestException, UnknownHostException {
         userBean.resetPassword(resetPasswordDto.getToken(), resetPasswordDto.getNewPassword());
     }
 
@@ -58,7 +60,7 @@ public class UserService {
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public TokenDto login(LoginDto user) throws InvalidLoginException {return userBean.login(user);}
+    public TokenDto login(LoginDto user) throws InvalidLoginException, UnknownHostException {return userBean.login(user);}
     /**
      * Retrieves the photo URL and the first name associated with the provided username.
      * If the username and password are not provided in the request headers, returns a status code 401 (Unauthorized)
@@ -70,7 +72,7 @@ public class UserService {
     @GET
     @Path("/photoandname")
     @Produces(MediaType.APPLICATION_JSON)
-    public InitialInformationDto getPhoto(@HeaderParam("Authorization") String authHeader) throws UserNotFoundException {
+    public InitialInformationDto getPhoto(@HeaderParam("Authorization") String authHeader) throws UserNotFoundException, UnknownHostException {
         String token = authHeader.substring(7);
         return userBean.getUserBasicInfo(token);
     }
@@ -87,7 +89,7 @@ public class UserService {
     @Path("info/{usernameProfile}")
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.GET_OTHER_USER_INFO)
-    public UserWithNoPassword userInfo(@PathParam("usernameProfile") String usernameProfile) throws UserNotFoundException {
+    public UserWithNoPassword userInfo(@PathParam("usernameProfile") String usernameProfile) throws UserNotFoundException, UnknownHostException {
         return userBean.getUserWithNoPasswordByUsername(usernameProfile);
     }
 
@@ -111,7 +113,7 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.EDIT_OWN_USER_INFO)
-    public void editUserData(@Valid UserUpdateDTO updatedUser, @HeaderParam("Authorization") String authHeader) throws UserNotFoundException {
+    public void editUserData(@Valid UserUpdateDTO updatedUser, @HeaderParam("Authorization") String authHeader) throws UserNotFoundException, UnknownHostException {
         String token = authHeader.substring(7);
         userBean.updateUser(token, updatedUser);}
 
@@ -125,7 +127,7 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.EDIT_OTHER_USER_INFO)
-    public void adminEditUserData(@Valid UserUpdateDTO updatedUser, @HeaderParam("userToChangeUsername") String username) throws UserNotFoundException {
+    public void adminEditUserData(@Valid UserUpdateDTO updatedUser, @HeaderParam("userToChangeUsername") String username) throws UserNotFoundException, UnknownHostException {
         userBean.updateUserByUsername(username, updatedUser);
     }
 
@@ -137,7 +139,7 @@ public class UserService {
     @POST
     @Path("/password")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void editUserPassword(@Valid UserNewPassword updatedPassword, @HeaderParam("Authorization") String authHeader) throws InvalidPasswordRequestException {
+    public void editUserPassword(@Valid UserNewPassword updatedPassword, @HeaderParam("Authorization") String authHeader) throws InvalidPasswordRequestException, UnknownHostException {
         String token = authHeader.substring(7);
         userBean.updatePassWord(token, updatedPassword.getNewPassword(), updatedPassword.getPassword());
     }
@@ -153,7 +155,7 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.PERMANENTLY_USER_DELET)
-    public void deleteUserPermanently(@HeaderParam("userToDeleteUsername")String username) throws UserNotFoundException, CriticalDataDeletionAttemptException {
+    public void deleteUserPermanently(@HeaderParam("userToDeleteUsername")String username) throws UserNotFoundException, CriticalDataDeletionAttemptException, UnknownHostException {
         userBean.transferTasks(username);
         userBean.transferCategories(username);
         userBean.deleteMessages(username);
@@ -171,7 +173,7 @@ public class UserService {
      *  */
     @POST
     @Path("/logout")
-    public void logout(@HeaderParam("Authorization") String authHeader) throws UserNotFoundException {
+    public void logout(@HeaderParam("Authorization") String authHeader) throws UserNotFoundException, UnknownHostException {
         String token = authHeader.substring(7);
         userBean.logout(token);
     }

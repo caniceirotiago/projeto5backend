@@ -3,6 +3,7 @@ package aor.paj.bean;
 import aor.paj.dao.MessageDao;
 import aor.paj.dto.MessageDto;
 import aor.paj.entity.MessageEntity;
+import aor.paj.exception.DatabaseOperationException;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.validation.constraints.NotNull;
@@ -19,7 +20,7 @@ public class MessageBean {
     @EJB
     private NotificationBean notificationBean;
 
-    public MessageEntity sendMessage(MessageDto messageDto) {
+    public MessageEntity sendMessage(MessageDto messageDto) throws DatabaseOperationException {
         MessageEntity message = convertDtoToEntity(messageDto);
         messageDao.persist(message);
         return message;

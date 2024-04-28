@@ -2,6 +2,7 @@ package aor.paj.service.websocket;
 
 import aor.paj.bean.NotificationBean;
 import aor.paj.entity.MessageEntity;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.UserNotFoundException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -110,7 +111,7 @@ public class ChatWebSocket {
             }
         }
     }
-    public void receiveSendMessage(Session session, JsonObject json) throws IOException, UserNotFoundException {
+    public void receiveSendMessage(Session session, JsonObject json) throws IOException, UserNotFoundException, DatabaseOperationException {
         JsonObject data = json.getAsJsonObject("data");
         MessageDto msg = gson.fromJson(data, MessageDto.class);
         msg.setSentAt(LocalDateTime.now());

@@ -1,5 +1,6 @@
 package aor.paj.bean;
 
+import aor.paj.exception.DatabaseOperationException;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
@@ -12,7 +13,7 @@ public class ConfigurationBean {
     @EJB
     private ConfigurationDao configurationDao;
 
-    public void initializeDefaultConfigurations() {
+    public void initializeDefaultConfigurations() throws DatabaseOperationException {
         String sessionTimeoutKey = "sessionTimeout";
         if (!configurationDao.configExists(sessionTimeoutKey)) {
             ConfigurationEntity sessionTimeout = new ConfigurationEntity(sessionTimeoutKey, "1800", "Timeout da sessão em segundos");

@@ -3,21 +3,22 @@ package aor.paj.dto.Statistics;
 import aor.paj.dto.CategoryDto;
 
 import java.util.List;
+import java.util.Map;
 
 public class CategoryStatisticsDTO {
-    private List<CategoryDto> categories;
+    private Map<String, Long> categories;
 
     public CategoryStatisticsDTO() {}
 
-    public CategoryStatisticsDTO(List<CategoryDto> categories) {
+    public CategoryStatisticsDTO(Map<String, Long> categories) {
         this.categories = categories;
     }
 
-    public List<CategoryDto> getCategories() {
+    public Map<String, Long> getCategories() {
         return categories;
     }
 
-    public void setCategories(List<CategoryDto> categories) {
+    public void setCategories(Map<String, Long> categories) {
         this.categories = categories;
     }
 }

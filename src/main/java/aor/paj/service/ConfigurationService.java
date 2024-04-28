@@ -5,6 +5,7 @@ import aor.paj.bean.PermissionBean;
 import aor.paj.dao.ConfigurationDao;
 import aor.paj.dto.ConfigurationDto;
 import aor.paj.entity.ConfigurationEntity;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.service.status.Function;
 import filters.RequiresPermission;
 import jakarta.ejb.EJB;
@@ -30,7 +31,7 @@ public class ConfigurationService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.EDIT_CONFIGURATION_INFO)
-    public Response updateConfiguration(ConfigurationDto configurationDto) {
+    public Response updateConfiguration(ConfigurationDto configurationDto) throws DatabaseOperationException {
         boolean exists = configurationDao.configExists(configurationDto.getConfigKey());
         if (exists) {
             boolean success = configurationDao.updateConfigValue(configurationDto.getConfigKey(), configurationDto.getConfigValue());

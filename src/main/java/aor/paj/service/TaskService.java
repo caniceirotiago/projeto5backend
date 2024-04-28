@@ -2,6 +2,7 @@
 package aor.paj.service;
 import aor.paj.bean.TaskBean;
 import aor.paj.dto.TaskDto;
+import aor.paj.exception.DatabaseOperationException;
 import aor.paj.exception.EntityValidationException;
 import aor.paj.exception.UserConfirmationException;
 import aor.paj.service.status.Function;
@@ -11,6 +12,8 @@ import jakarta.ejb.EJB;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+
+import java.net.UnknownHostException;
 import java.util.List;
 
 @Path("/tasks")
@@ -30,7 +33,7 @@ public class TaskService {
     @POST
     @Path("")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void createTask(@Valid @HeaderParam("Authorization") String authHeader, TaskDto task) throws EntityValidationException, UserConfirmationException {
+    public void createTask(@Valid @HeaderParam("Authorization") String authHeader, TaskDto task) throws EntityValidationException, UserConfirmationException, UnknownHostException, DatabaseOperationException {
         String token = authHeader.substring(7);
         taskBean.addTask(token,task);
     }
@@ -50,7 +53,13 @@ public class TaskService {
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     @RequiresPermissionByTaskId
-    public void editTask(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) throws EntityValidationException {
+    public void editTask(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
+        taskBean.editTask(id, taskDto);
+    }
+    @POST
+    @Path("/status/{id}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void editTaskStatus(@Valid @PathParam("id")int id, @HeaderParam("Authorization") String authorizationHeader, TaskDto taskDto) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
         taskBean.editTask(id, taskDto);
     }
 
@@ -65,7 +74,7 @@ public class TaskService {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public TaskDto getTaskById(@PathParam("id") int id) throws EntityValidationException {
+    public TaskDto getTaskById(@PathParam("id") int id) throws EntityValidationException, UnknownHostException {
         return taskBean.getTaskDtoById(id);
     }
 
@@ -102,7 +111,7 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY)
-    public void deleteAllTasksTemporarily(@PathParam("username")String username) throws UserConfirmationException {
+    public void deleteAllTasksTemporarily(@PathParam("username")String username) throws UserConfirmationException, UnknownHostException, DatabaseOperationException {
         taskBean.deleteAllTasksByUser(username);
     }
 
@@ -121,7 +130,7 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RequiresPermission(Function.DELETE_TASK_PERMANENTLY)
-    public void deleteTaskPermanently(@PathParam("id")int id) throws EntityValidationException {
+    public void deleteTaskPermanently(@PathParam("id")int id) throws EntityValidationException, UnknownHostException, DatabaseOperationException {
         taskBean.deleteTaskPermanently(id);
     }
 }
